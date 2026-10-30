@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brioche: #E9A13B;
+  --color-ketchup: #C62F1D;
+  --color-char: #24160F;
+  --color-pickle: #4C6B2E;
+  --color-sesame: #FBEBCB;
+
+  --font-display: "Bricolage Grotesque", sans-serif;
+  --font-sans: "DM Sans", sans-serif;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--color-sesame);
+  color: var(--color-char);
+}
+
+@keyframes marquee {
+  to { transform: translateX(-50%); }
+}
+.marquee {
+  animation: marquee 30s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee { animation: none; }
+}
