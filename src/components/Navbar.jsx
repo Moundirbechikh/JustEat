@@ -128,7 +128,7 @@ export default function Navbar() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 48 }}
               transition={{ type: 'spring', stiffness: 260, damping: 28 }}
-              className="pointer-events-auto ml-auto mt-3 w-[min(86vw,20rem)] rounded-l-3xl bg-[#C62F1D] p-6 shadow-xl shadow-black/20 lg:hidden"
+              className="pointer-events-auto ml-auto mt-3 w-[min(86vw,20rem)] rounded-l-3xl bg-[#C62F1D] p-6 shadow-xl shadow-black/20 lg:hidden font-display"
             >
               <ul className="flex flex-col gap-1">
                 {links.map(({ to, label, end }) => (
@@ -138,7 +138,7 @@ export default function Navbar() {
                       end={end}
                       onClick={() => setOpen(false)}
                       className={({ isActive }) =>
-                        `flex items-center gap-2 rounded-xl px-3 py-3 text-2xl font-extrabold text-white transition hover:translate-x-1 hover:bg-white/15 ${
+                        `flex items-center gap-2 rounded-xl px-3 py-3 text-2xl font-display text-white tracking-tight transition hover:translate-x-1 hover:bg-white/15 ${
                           isActive ? 'bg-white/15' : ''
                         }`
                       }
