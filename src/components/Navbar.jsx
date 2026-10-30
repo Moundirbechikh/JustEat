@@ -138,7 +138,7 @@ export default function Navbar() {
                       end={end}
                       onClick={() => setOpen(false)}
                       className={({ isActive }) =>
-                        `flex items-center gap-2 rounded-xl px-3 py-3 text-2xl font-display text-white tracking-tight transition hover:translate-x-1 hover:bg-white/15 ${
+                        `flex items-center gap-2 rounded-xl px-3 py-3 text-2xl font-display font-bold text-white tracking-tight transition hover:translate-x-1 hover:bg-white/15 ${
                           isActive ? 'bg-white/15' : ''
                         }`
                       }
