@@ -42,7 +42,8 @@ export default function MiniMenu() {
   const reduce = useReducedMotion()
 
   return (
-    <section className="relative -mt-0.5 bg-[#C62F1D] px-5 pb-24 pt-16 text-white md:pt-24 lg:px-10">
+    // pb-28 sur téléphone : laisse la place à la bosse blanche et au burger de la section suivante
+    <section className="relative -mt-0.5 bg-[#C62F1D] px-5 pb-28 pt-16 text-white md:pb-24 md:pt-24 lg:px-10">
       <div className="mx-auto max-w-7xl">
 
         {/* En-tête : Titre à gauche et Logo/Texte personnalisé à droite */}
