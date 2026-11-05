@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { ArrowRight, Check, ShoppingBag } from 'lucide-react'
+import { ArrowRight, Check, ShoppingBag, Flame, Utensils, CreditCard } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import logo from '../assets/Logo1.png'
 import { CATEGORIES, OPTIONS, PRODUCTS } from '../data/menu'
@@ -14,10 +14,15 @@ const products = PRODUCTS.filter((p) => p.available !== false)
 const byCategory = (id) => products.filter((p) => p.category === id)
 
 const steps = [
-  { n: '1', title: 'Choisis ton burger', text: 'Personnalise-le avec tes suppléments.' },
-  { n: '2', title: 'Complète ton repas', text: 'Frites, sauces et boisson te sont proposées.' },
-  { n: '3', title: 'Paye à la caisse', text: 'Aucun paiement en ligne, aucun compte.' },
+  { n: '1', title: 'Choisis ton burger', text: 'Personnalise-le avec tes suppléments.', icon: Flame },
+  { n: '2', title: 'Complète ton repas', text: 'Frites, sauces et boisson te sont proposées.', icon: Utensils },
+  { n: '3', title: 'Paye à la caisse', text: 'Aucun paiement en ligne, aucun compte.', icon: CreditCard },
 ]
+
+/* -------------------------------------------------------------------------- */
+/*  Sauce qui coule — SVG + Framer Motion (réaliste, brand #C62F1D)          */
+/* -------------------------------------------------------------------------- */
+
 
 export default function Menu() {
   const reduce = useReducedMotion()
@@ -79,45 +84,49 @@ export default function Menu() {
       <Navbar />
 
       <main className="bg-white text-black">
-        {/* ---------- En-tête ---------- */}
-        <header className="px-5 pb-10 pt-28 md:pt-36 lg:px-10">
-          <div className="mx-auto flex max-w-7xl flex-col gap-6 md:flex-row md:items-end md:justify-between">
-            <div className="max-w-2xl">
-              <span className="inline-block rounded-full bg-[#C62F1D]/10 px-4 py-1.5 text-sm font-bold text-[#C62F1D]">
-                Fraîcheur & fait maison
-              </span>
-              <h1 className="mt-4 font-display text-5xl font-extrabold leading-[0.95] tracking-tighter sm:text-6xl md:text-7xl">
+        {/* ---------- En-tête Épuré & Modernisé ---------- */}
+        <header className="relative px-5 pb-8 pt-20 md:pt-24 lg:px-10">
+
+
+          <div className="relative z-[2] mx-auto max-w-7xl">
+            <div className="max-w-3xl">
+              <h1 className="font-display text-5xl font-extrabold leading-[1.05] tracking-tighter sm:text-6xl md:text-7xl">
                 Notre carte & tarifs
               </h1>
-              <p className="mt-4 text-lg text-neutral-600 md:text-xl">
-                Choisis tes smash burgers, tes frites et tes boissons. Tu commandes ici, tu paies directement à la caisse.
+              <p className="mt-4 text-base text-neutral-600 md:text-xl leading-relaxed">
+                Choisis tes smash burgers, tes frites et tes boissons. Tu commandes directement ici et tu paies à la caisse.
               </p>
             </div>
-
-            <img
-              src={logo}
-              alt="Just Burgers"
-              className="h-20 w-auto self-start object-contain md:h-32 md:self-end"
-            />
           </div>
 
-          {/* Comment ça marche */}
-          <ol className="mx-auto mt-8 grid max-w-7xl gap-3 sm:grid-cols-3">
-            {steps.map((s) => (
-              <li key={s.n} className="flex items-center gap-4 rounded-[1.5rem] border-2 border-black/10 p-4">
-                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-[#C62F1D] font-display text-2xl font-extrabold text-white">
-                  {s.n}
-                </span>
-                <div>
-                  <p className="font-display text-lg font-extrabold leading-tight tracking-tighter text-black">{s.title}</p>
-                  <p className="text-sm text-neutral-600">{s.text}</p>
-                </div>
-              </li>
-            ))}
+          {/* Cartes d'étapes agrandies et percutantes */}
+          <ol className="relative z-[2] mx-auto mt-8 grid max-w-7xl gap-4 sm:grid-cols-3">
+            {steps.map((s) => {
+              const IconComp = s.icon
+              return (
+                <li
+                  key={s.n}
+                  className="group flex items-center gap-5 rounded-[2rem] border-2 border-black/10 bg-neutral-50 p-6 shadow-sm transition hover:border-[#C62F1D] hover:bg-white hover:shadow-md"
+                >
+                  <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-[#C62F1D] font-display text-2xl font-extrabold text-white shadow-md">
+                    {s.n}
+                  </span>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-display text-lg font-extrabold leading-tight tracking-tight text-black">
+                        {s.title}
+                      </p>
+                      <IconComp size={18} className="text-[#C62F1D]" />
+                    </div>
+                    <p className="mt-1 text-xs text-neutral-600 md:text-sm">{s.text}</p>
+                  </div>
+                </li>
+              )
+            })}
           </ol>
         </header>
 
-        {/* ---------- Barre secondaire (Sans logo, collée à droite, largeur adaptée au texte sur mobile) ---------- */}
+        {/* ---------- Barre secondaire (Collée à droite, sans logo, adaptative sur mobile) ---------- */}
         <div className="sticky top-[4.5rem] z-30 pt-2 pb-4 md:top-[5.25rem] pointer-events-none">
           <div className="flex justify-end">
             <div className="pointer-events-auto flex items-center justify-end rounded-l-full bg-white py-3.5 pl-6 pr-0 shadow-xl shadow-black/10 border-y border-l border-neutral-200">
@@ -145,7 +154,7 @@ export default function Menu() {
                 ))}
               </div>
 
-              {/* Mobile : Largeur ajustée exactement au titre de la section active avec écriture plus grande */}
+              {/* Mobile : Largeur ajustée exactement au titre de la section active */}
               <div className="flex md:hidden items-center pr-4">
                 <AnimatePresence mode="wait">
                   <motion.span
