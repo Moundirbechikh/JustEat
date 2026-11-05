@@ -49,7 +49,7 @@ export default function Reviews() {
   const mobileReview2 = reviewsData[(currentIndex + 1) % reviewsData.length]
 
   return (
-    <section className="relative overflow-hidden bg-[#C62F1D] px-5 py-16 text-white md:pt-24 md:pb-8 lg:px-10">
+    <section id="reviews" className="relative overflow-hidden bg-[#C62F1D] px-5 py-16 text-white md:pt-24 md:pb-8 lg:px-10">
       
       {/* --- Effet Croc Fixe & Ultra-Réaliste --- */}
       <div className="absolute right-0 top-0 z-20 pointer-events-none w-52 sm:w-72 md:w-96 lg:w-[26rem]">

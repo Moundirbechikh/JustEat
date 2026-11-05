@@ -1,29 +1,51 @@
 import { useEffect, useState } from 'react'
-import { Link, NavLink, useLocation } from 'react-router-dom'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ArrowRight, Menu, Star, X } from 'lucide-react'
 
 const links = [
   { to: '/', label: 'Accueil', end: true },
   { to: '/menu', label: 'Menu' },
-  { to: '/avis', label: 'Avis', icon: Star },
+  { to: '/#reviews', label: 'Avis', isScroll: true },
   { to: '/suivi', label: 'Ma commande' },
 ]
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
   const [hovered, setHovered] = useState(null)
-  const { pathname } = useLocation()
+  const { pathname, hash } = useLocation()
+  const navigate = useNavigate()
   const reduce = useReducedMotion()
 
-  // Lien de la page active
+  // Défilement fluide automatique quand le hash #reviews est dans l'URL
+  useEffect(() => {
+    if (pathname === '/' && hash === '#reviews') {
+      const element = document.getElementById('reviews')
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' })
+      }
+    }
+  }, [pathname, hash])
+
+  const handleAvisClick = (e) => {
+    e.preventDefault()
+    setOpen(false)
+
+    if (pathname === '/') {
+      const element = document.getElementById('reviews')
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' })
+      }
+    } else {
+      navigate('/#reviews')
+    }
+  }
+
   const activeTo = links.find((l) =>
     l.end ? pathname === l.to : pathname.startsWith(l.to)
   )?.to
-  // La pastille suit la souris, sinon reste sur la page active
   const pillTo = hovered ?? activeTo
 
-  // Échap pour fermer + blocage du scroll quand le menu est ouvert
   useEffect(() => {
     if (!open) return
     const onKey = (e) => e.key === 'Escape' && setOpen(false)
@@ -37,50 +59,73 @@ export default function Navbar() {
 
   return (
     <header className="pointer-events-none fixed inset-x-0 top-5 z-50 md:top-6">
-      {/* Bande rouge, collée à droite, arrondie à gauche */}
       <div className="pointer-events-auto font-display ml-auto flex h-12 w-fit items-center gap-3 rounded-l-full bg-[#C62F1D] pl-5 pr-2 shadow-lg shadow-black/15 lg:h-14 lg:gap-4 lg:pl-8 lg:pr-8">
+        
+        {/* Logo / Nom du restaurant */}
+        <Link
+          to="/"
+          onClick={() => setOpen(false)}
+          className="font-display mr-1 whitespace-nowrap text-xl font-extrabold leading-none tracking-tighter text-white lg:mr-6 lg:text-2xl"
+        >
+          Just{' '}
+          <span className="text-black [paint-order:stroke_fill] [stroke-linejoin:round] [-webkit-text-stroke:3px_white] lg:[-webkit-text-stroke:4px_white]">
+            Burgers
+          </span>
+        </Link>
 
-        {/* Nom du restaurant, tout à gauche de la bande */}
-{/* Nom du restaurant, tout à gauche de la bande */}
-<Link
-  to="/"
-  onClick={() => setOpen(false)}
-  className="font-display mr-1 whitespace-nowrap text-xl font-extrabold leading-none tracking-tighter text-white lg:mr-6 lg:text-2xl"
->
-  Just{' '}
-  <span className="text-black [paint-order:stroke_fill] [stroke-linejoin:round] [-webkit-text-stroke:3px_white] lg:[-webkit-text-stroke:4px_white]">
-    Burgers
-  </span>
-</Link>
-
-        {/* Liens ordinateur */}
+        {/* Liens Ordinateur */}
         <nav
           className="hidden items-center lg:flex"
           onMouseLeave={() => setHovered(null)}
         >
-          {links.map(({ to, label, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              onMouseEnter={() => setHovered(to)}
-              onFocus={() => setHovered(to)}
-              onBlur={() => setHovered(null)}
-              className="relative flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[0.9rem] font-semibold text-white"
-            >
-              {pillTo === to && (
-                <motion.span
-                  layoutId="nav-pill"
-                  className="absolute inset-0 rounded-full bg-white/20"
-                  transition={
-                    reduce
-                      ? { duration: 0 }
-                      : { type: 'spring', stiffness: 420, damping: 34 }
-                  }
-                />
-              )}
-              <span className="relative">{label}</span>
-            </NavLink>
+          {links.map(({ to, label, end, isScroll }) => (
+            isScroll ? (
+              <a
+                key={to}
+                href={to}
+                onClick={handleAvisClick}
+                onMouseEnter={() => setHovered(to)}
+                onFocus={() => setHovered(to)}
+                onBlur={() => setHovered(null)}
+                className="relative flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[0.9rem] font-semibold text-white"
+              >
+                {pillTo === to && (
+                  <motion.span
+                    layoutId="nav-pill"
+                    className="absolute inset-0 rounded-full bg-white/20"
+                    transition={
+                      reduce
+                        ? { duration: 0 }
+                        : { type: 'spring', stiffness: 420, damping: 34 }
+                    }
+                  />
+                )}
+                <span className="relative">{label}</span>
+              </a>
+            ) : (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                onMouseEnter={() => setHovered(to)}
+                onFocus={() => setHovered(to)}
+                onBlur={() => setHovered(null)}
+                className="relative flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[0.9rem] font-semibold text-white"
+              >
+                {pillTo === to && (
+                  <motion.span
+                    layoutId="nav-pill"
+                    className="absolute inset-0 rounded-full bg-white/20"
+                    transition={
+                      reduce
+                        ? { duration: 0 }
+                        : { type: 'spring', stiffness: 420, damping: 34 }
+                    }
+                  />
+                )}
+                <span className="relative">{label}</span>
+              </NavLink>
+            )
           ))}
         </nav>
 
@@ -95,7 +140,7 @@ export default function Navbar() {
           />
         </Link>
 
-        {/* Trois lignes téléphone */}
+        {/* Bouton Menu Mobile */}
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
@@ -108,7 +153,7 @@ export default function Navbar() {
         </button>
       </div>
 
-      {/* Menu téléphone */}
+      {/* Menu Téléphone */}
       <AnimatePresence>
         {open && (
           <>
@@ -131,20 +176,30 @@ export default function Navbar() {
               className="pointer-events-auto ml-auto mt-3 w-[min(86vw,20rem)] rounded-l-3xl bg-[#C62F1D] p-6 shadow-xl shadow-black/20 lg:hidden font-display"
             >
               <ul className="flex flex-col gap-1">
-                {links.map(({ to, label, end }) => (
+                {links.map(({ to, label, end, isScroll }) => (
                   <li key={to}>
-                    <NavLink
-                      to={to}
-                      end={end}
-                      onClick={() => setOpen(false)}
-                      className={({ isActive }) =>
-                        `flex items-center gap-2 rounded-xl px-3 py-3 text-2xl font-display font-bold text-white tracking-tight transition hover:translate-x-1 hover:bg-white/15 ${
-                          isActive ? 'bg-white/15' : ''
-                        }`
-                      }
-                    >
-                      {label}
-                    </NavLink>
+                    {isScroll ? (
+                      <a
+                        href={to}
+                        onClick={handleAvisClick}
+                        className="flex items-center gap-2 rounded-xl px-3 py-3 text-2xl font-display font-bold text-white tracking-tight transition hover:translate-x-1 hover:bg-white/15"
+                      >
+                        {label}
+                      </a>
+                    ) : (
+                      <NavLink
+                        to={to}
+                        end={end}
+                        onClick={() => setOpen(false)}
+                        className={({ isActive }) =>
+                          `flex items-center gap-2 rounded-xl px-3 py-3 text-2xl font-display font-bold text-white tracking-tight transition hover:translate-x-1 hover:bg-white/15 ${
+                            isActive ? 'bg-white/15' : ''
+                          }`
+                        }
+                      >
+                        {label}
+                      </NavLink>
+                    )}
                   </li>
                 ))}
               </ul>

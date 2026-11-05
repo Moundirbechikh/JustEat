@@ -1,4 +1,3 @@
-import Navbar from '../components/Navbar'
 import Hero from '../components/Hero'
 import MiniMenu from '../components/MiniMenu'
 import Concept from '../components/Concept'
@@ -9,13 +8,12 @@ import Footer from '../components/Footer'
 export default function Home() {
   return (
     <>
-      <Navbar />
       <Hero />
-      <MiniMenu/>
-      <Concept/>
-      <Reviews/>
-      <Location/>
-      <Footer/>
+      <MiniMenu />
+      <Concept />
+      <Reviews />
+      <Location />
+      <Footer />
     </>
   )
 }
