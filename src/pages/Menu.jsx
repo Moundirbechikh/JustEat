@@ -19,11 +19,6 @@ const steps = [
   { n: '3', title: 'Paye à la caisse', text: 'Aucun paiement en ligne, aucun compte.', icon: CreditCard },
 ]
 
-/* -------------------------------------------------------------------------- */
-/*  Sauce qui coule — SVG + Framer Motion (réaliste, brand #C62F1D)          */
-/* -------------------------------------------------------------------------- */
-
-
 export default function Menu() {
   const reduce = useReducedMotion()
   const { addLines, openCart } = useCart()
@@ -84,41 +79,39 @@ export default function Menu() {
       <Navbar />
 
       <main className="bg-white text-black">
-        {/* ---------- En-tête Épuré & Modernisé ---------- */}
-        <header className="relative px-5 pb-8 pt-20 md:pt-24 lg:px-10">
-
-
-          <div className="relative z-[2] mx-auto max-w-7xl">
+        {/* ---------- En-tête Principal ---------- */}
+        <header className="px-5 pb-8 pt-20 md:pt-24 lg:px-10">
+          <div className="mx-auto max-w-7xl">
             <div className="max-w-3xl">
-              <h1 className="font-display text-5xl font-extrabold leading-[1.05] tracking-tighter sm:text-6xl md:text-7xl">
+              <h1 className="font-display text-4xl font-extrabold leading-[1.05] tracking-tighter sm:text-6xl md:text-7xl">
                 Notre carte & tarifs
               </h1>
-              <p className="mt-4 text-base text-neutral-600 md:text-xl leading-relaxed">
+              <p className="mt-3 text-sm text-neutral-600 sm:text-base md:text-xl leading-relaxed">
                 Choisis tes smash burgers, tes frites et tes boissons. Tu commandes directement ici et tu paies à la caisse.
               </p>
             </div>
           </div>
 
-          {/* Cartes d'étapes agrandies et percutantes */}
-          <ol className="relative z-[2] mx-auto mt-8 grid max-w-7xl gap-4 sm:grid-cols-3">
+          {/* Cartes d'étapes (Responsive Desktop & Phone) */}
+          <ol className="mx-auto mt-8 grid max-w-7xl gap-4 sm:grid-cols-3">
             {steps.map((s) => {
               const IconComp = s.icon
               return (
                 <li
                   key={s.n}
-                  className="group flex items-center gap-5 rounded-[2rem] border-2 border-black/10 bg-neutral-50 p-6 shadow-sm transition hover:border-[#C62F1D] hover:bg-white hover:shadow-md"
+                  className="group flex items-center gap-4 sm:gap-5 rounded-[2rem] border-2 border-black/10 bg-neutral-50 p-4 sm:p-6 shadow-sm transition hover:border-[#C62F1D] hover:bg-white hover:shadow-md"
                 >
-                  <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-[#C62F1D] font-display text-2xl font-extrabold text-white shadow-md">
+                  <span className="grid h-12 w-12 sm:h-14 sm:w-14 shrink-0 place-items-center rounded-2xl bg-[#C62F1D] font-display text-xl sm:text-2xl font-extrabold text-white shadow-md">
                     {s.n}
                   </span>
                   <div>
                     <div className="flex items-center gap-2">
-                      <p className="font-display text-lg font-extrabold leading-tight tracking-tight text-black">
+                      <p className="font-display text-base sm:text-lg font-extrabold leading-tight tracking-tight text-black">
                         {s.title}
                       </p>
-                      <IconComp size={18} className="text-[#C62F1D]" />
+                      <IconComp size={16} className="text-[#C62F1D] shrink-0" />
                     </div>
-                    <p className="mt-1 text-xs text-neutral-600 md:text-sm">{s.text}</p>
+                    <p className="mt-1 text-xs text-neutral-600 sm:text-sm">{s.text}</p>
                   </div>
                 </li>
               )
@@ -126,12 +119,12 @@ export default function Menu() {
           </ol>
         </header>
 
-        {/* ---------- Barre secondaire (Collée à droite, sans logo, adaptative sur mobile) ---------- */}
+        {/* ---------- Barre secondaire Sticky (Collée à droite) ---------- */}
         <div className="sticky top-[4.5rem] z-30 pt-2 pb-4 md:top-[5.25rem] pointer-events-none">
           <div className="flex justify-end">
             <div className="pointer-events-auto flex items-center justify-end rounded-l-full bg-white py-3.5 pl-6 pr-0 shadow-xl shadow-black/10 border-y border-l border-neutral-200">
               
-              {/* Desktop : Tous les boutons de catégories alignés à droite */}
+              {/* Desktop : Tous les onglets alignés à droite */}
               <div
                 ref={tabsRef}
                 className="hidden md:flex items-center gap-2 pr-6 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -154,7 +147,7 @@ export default function Menu() {
                 ))}
               </div>
 
-              {/* Mobile : Largeur ajustée exactement au titre de la section active */}
+              {/* Mobile : Section active */}
               <div className="flex md:hidden items-center pr-4">
                 <AnimatePresence mode="wait">
                   <motion.span
@@ -174,36 +167,56 @@ export default function Menu() {
           </div>
         </div>
 
-        {/* ---------- Burgers (rouge) ---------- */}
+        {/* ---------- SECTION BURGERS (Rouge) avec Logo placé à droite ---------- */}
         <section
           id="cat-burger"
-          className="scroll-mt-32 rounded-t-[2.5rem] bg-[#C62F1D] px-5 pb-20 pt-14 text-white lg:px-10"
+          className="scroll-mt-32 rounded-t-[2.5rem] bg-[#C62F1D] px-5 pb-20 pt-12 text-white lg:px-10"
         >
           <div className="mx-auto max-w-7xl">
-            <h2 className="font-display text-4xl font-extrabold tracking-tighter md:text-6xl">
-              Nos smash burgers
-            </h2>
-            <p className="mt-3 flex max-w-2xl items-start gap-2 text-lg text-white/90">
-              Après ton burger, on te propose les accompagnements, les sauces et une boisson.
-            </p>
+            
+            {/* Header de la section avec Titre à gauche et Logo à droite */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-8">
+              <div className="max-w-2xl">
+                <h2 className="font-display text-3xl font-extrabold tracking-tighter sm:text-5xl md:text-6xl">
+                  Nos smash burgers
+                </h2>
+                <p className="mt-2 text-sm text-white/90 sm:text-base md:text-lg">
+                  Après ton burger, on te propose les accompagnements, les sauces et une boisson.
+                </p>
+              </div>
 
-            <div className="grid grid-cols-1 gap-x-6 md:grid-cols-2 lg:grid-cols-4">
+              {/* Logo positionné dans l'encadré supérieur droit de la section rouge */}
+              <div className="shrink-0 self-start sm:self-center">
+                <img
+                  src={logo}
+                  alt="Just Burgers"
+                  className="h-16 w-auto object-contain sm:h-20 md:h-24 drop-shadow-md"
+                />
+              </div>
+            </div>
+
+            {/* Carrousel 1 par 1 sur Mobile / Grille sur Desktop */}
+            <div className="mt-6 flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 md:grid-cols-4 sm:overflow-visible sm:pb-0">
               {byCategory('burger').map((p, i) => (
-                <BurgerCard key={p.id} product={p} index={i} onAdd={handleAdd} />
+                <div key={p.id} className="w-[85vw] shrink-0 snap-center sm:w-full">
+                  <BurgerCard product={p} index={i} onAdd={handleAdd} />
+                </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* ---------- Accompagnements (blanc) ---------- */}
+        {/* ---------- Accompagnements ---------- */}
         <section id="cat-side" className="scroll-mt-32 px-5 pt-16 lg:px-10">
           <div className="mx-auto max-w-7xl">
-            <h2 className="font-display text-4xl font-extrabold tracking-tighter text-black md:text-5xl">
+            <h2 className="font-display text-3xl font-extrabold tracking-tighter text-black sm:text-4xl md:text-5xl">
               Pour accompagner
             </h2>
-            <ul className="mt-6 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            <ul className="mt-6 flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible sm:pb-0">
               {byCategory('side').map((p, i) => (
-                <ItemRow key={p.id} product={p} index={i} onAdd={handleAdd} />
+                <li key={p.id} className="w-[85vw] shrink-0 snap-center sm:w-full">
+                  <ItemRow product={p} index={i} onAdd={handleAdd} />
+                </li>
               ))}
             </ul>
           </div>
@@ -212,10 +225,12 @@ export default function Menu() {
         {/* ---------- Sauces ---------- */}
         <section id="cat-sauce" className="scroll-mt-32 px-5 pb-16 pt-14 lg:px-10">
           <div className="mx-auto max-w-7xl">
-            <h2 className="font-display text-4xl font-extrabold tracking-tighter text-black md:text-5xl">Sauces</h2>
-            <ul className="mt-6 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            <h2 className="font-display text-3xl font-extrabold tracking-tighter text-black sm:text-4xl md:text-5xl">Sauces</h2>
+            <ul className="mt-6 flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible sm:pb-0">
               {byCategory('sauce').map((p, i) => (
-                <ItemRow key={p.id} product={p} index={i} onAdd={handleAdd} />
+                <li key={p.id} className="w-[85vw] shrink-0 snap-center sm:w-full">
+                  <ItemRow product={p} index={i} onAdd={handleAdd} />
+                </li>
               ))}
             </ul>
           </div>
@@ -224,23 +239,25 @@ export default function Menu() {
         {/* ---------- Boissons ---------- */}
         <section id="cat-drink" className="scroll-mt-32 bg-white border-t border-black/10 px-5 pb-36 pt-16 text-black lg:px-10">
           <div className="mx-auto max-w-7xl">
-            <h2 className="font-display text-4xl font-extrabold tracking-tighter md:text-5xl">Boissons</h2>
-            <ul className="mt-6 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            <h2 className="font-display text-3xl font-extrabold tracking-tighter sm:text-4xl md:text-5xl">Boissons</h2>
+            <ul className="mt-6 flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible sm:pb-0">
               {byCategory('drink').map((p, i) => (
-                <ItemRow key={p.id} product={p} index={i} onAdd={handleAdd} />
+                <li key={p.id} className="w-[85vw] shrink-0 snap-center sm:w-full">
+                  <ItemRow product={p} index={i} onAdd={handleAdd} />
+                </li>
               ))}
             </ul>
 
             {/* Appel à l'action final */}
             <div className="mt-14 flex flex-col items-start justify-between gap-5 rounded-[2rem] bg-black p-6 text-white sm:flex-row sm:items-center sm:p-8">
               <div>
-                <h3 className="font-display text-3xl font-extrabold tracking-tighter">Prêt à commander ?</h3>
-                <p className="mt-1 text-white/80">Vérifie ton panier, valide avec ton prénom, et paye à la caisse.</p>
+                <h3 className="font-display text-2xl font-extrabold tracking-tighter sm:text-3xl">Prêt à commander ?</h3>
+                <p className="mt-1 text-xs text-white/80 sm:text-sm">Vérifie ton panier, valide avec ton prénom, et paye à la caisse.</p>
               </div>
               <button
                 type="button"
                 onClick={openCart}
-                className="group inline-flex shrink-0 items-center gap-2 rounded-full bg-[#C62F1D] px-7 py-3.5 font-bold text-white transition hover:scale-105 hover:bg-white hover:text-black"
+                className="group inline-flex shrink-0 items-center gap-2 rounded-full bg-[#C62F1D] px-7 py-3.5 font-bold text-white transition hover:scale-105 hover:bg-white hover:text-black text-sm"
               >
                 <ShoppingBag size={20} />
                 Voir mon panier
