@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { ArrowRight, Check, ShoppingBag, Sparkles, Flame, Utensils, CupSoda } from 'lucide-react'
+import { ArrowRight, Check, ShoppingBag, Sparkles } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import logo from '../assets/Logo1.png'
 import { CATEGORIES, OPTIONS, PRODUCTS } from '../data/menu'
@@ -24,11 +24,10 @@ export default function Menu() {
   const { addLines, openCart } = useCart()
 
   const [active, setActive] = useState('burger')
-  const [sheet, setSheet] = useState(null) // produit en cours de composition
+  const [sheet, setSheet] = useState(null)
   const [toast, setToast] = useState(null)
   const tabsRef = useRef(null)
 
-  // Message de confirmation qui disparaît tout seul
   useEffect(() => {
     if (!toast) return
     const id = setTimeout(() => setToast(null), 2600)
@@ -55,7 +54,6 @@ export default function Menu() {
       .getElementById(`cat-${id}`)
       ?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
 
-  // Burger, choix obligatoire ou suppléments : on ouvre la fenêtre. Sinon ajout direct.
   const handleAdd = (product) => {
     if (product.category === 'burger' || product.variants || product.options?.length) {
       setSheet(product)
@@ -74,7 +72,6 @@ export default function Menu() {
     setToast(`${lines[0].name}${extra > 0 ? ` + ${extra} complément${extra > 1 ? 's' : ''}` : ''} ajouté`)
   }
 
-  // Obtenir le label de la catégorie active
   const activeCategoryLabel = CATEGORIES.find((c) => c.id === active)?.label || 'Menu'
 
   return (
@@ -120,61 +117,58 @@ export default function Menu() {
           </ol>
         </header>
 
-        {/* ---------- Deuxième Navbar Flottante (Style Pill / Capsule) ---------- */}
-        <nav
-          aria-label="Catégories du menu"
-          className="sticky top-[4.5rem] z-30 py-2 px-4 md:top-[5.25rem] flex justify-center pointer-events-none"
-        >
-          <div className="pointer-events-auto flex items-center justify-between w-full max-w-4xl rounded-full bg-[#C62F1D] p-1.5 shadow-xl shadow-black/20 border border-white/20 backdrop-blur-md">
-            
-            {/* Côté Gauche : Logo dans un encadré blanc / rouge */}
-            <div className="flex items-center gap-2 pl-2">
-              <div className="flex items-center justify-center rounded-xl  px-3 py-1 shadow-sm">
-                <img src={logo} alt="Just Burgers" className="h-6 w-auto object-contain" />
+        {/* ---------- Barre secondaire (Fond blanc, collée à droite sur desktop, hauteur plus grande) ---------- */}
+        <div className="sticky top-[4.5rem] z-30 pt-2 pb-4 md:top-[5.25rem] pointer-events-none">
+          <div className="flex justify-end">
+            <div className="pointer-events-auto flex items-center justify-between gap-6 w-full md:w-auto rounded-l-full bg-white py-3 pl-4 pr-0 md:pl-5 shadow-xl shadow-black/10 border-y border-l border-neutral-200">
+              
+              {/* Logo avec fond rouge uniquement sous le logo */}
+              <div className="flex items-center rounded-2xl bg-[#C62F1D] px-4 py-2 shadow-sm">
+                <img src={logo} alt="Just Burgers" className="h-6 w-auto object-contain brightness-0 invert" />
               </div>
-            </div>
 
-            {/* Côté Droit sur Desktop : Tous les onglets */}
-            <div
-              ref={tabsRef}
-              className="hidden md:flex items-center gap-1.5 pr-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            >
-              {CATEGORIES.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  data-tab={c.id}
-                  onClick={() => goTo(c.id)}
-                  aria-current={active === c.id ? 'true' : undefined}
-                  className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-bold transition-all ${
-                    active === c.id
-                      ? 'bg-white text-[#C62F1D] shadow-md scale-105'
-                      : 'text-white/85 hover:bg-white/10 hover:text-white'
-                  }`}
-                >
-                  {c.label}
-                </button>
-              ))}
-            </div>
+              {/* Desktop : Tous les boutons de catégories alignés à droite */}
+              <div
+                ref={tabsRef}
+                className="hidden md:flex items-center gap-2 pr-6 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              >
+                {CATEGORIES.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    data-tab={c.id}
+                    onClick={() => goTo(c.id)}
+                    aria-current={active === c.id ? 'true' : undefined}
+                    className={`shrink-0 rounded-full px-5 py-2.5 text-sm font-bold transition-all ${
+                      active === c.id
+                        ? 'bg-[#C62F1D] text-white shadow-md scale-105'
+                        : 'bg-neutral-100 text-neutral-800 hover:bg-neutral-200'
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
 
-            {/* Côté Droit sur Mobile : Uniquement le nom de la section active avec animation */}
-            <div className="flex md:hidden items-center pr-3">
-              <AnimatePresence mode="wait">
-                <motion.span
-                  key={active}
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 8 }}
-                  transition={{ duration: 0.2 }}
-                  className="rounded-full bg-white px-4 py-1 text-xs font-extrabold text-[#C62F1D] shadow-sm"
-                >
-                  {activeCategoryLabel}
-                </motion.span>
-              </AnimatePresence>
-            </div>
+              {/* Mobile : Affichage fluide de la section active avec animation */}
+              <div className="flex md:hidden items-center pr-4">
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={active}
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="rounded-full bg-[#C62F1D] px-5 py-2 text-xs font-extrabold text-white shadow-sm"
+                  >
+                    {activeCategoryLabel}
+                  </motion.span>
+                </AnimatePresence>
+              </div>
 
+            </div>
           </div>
-        </nav>
+        </div>
 
         {/* ---------- Burgers (rouge) ---------- */}
         <section
@@ -186,7 +180,6 @@ export default function Menu() {
               Nos smash burgers
             </h2>
             <p className="mt-3 flex max-w-2xl items-start gap-2 text-lg text-white/90">
-              <Sparkles size={22} className="mt-0.5 shrink-0 text-white" />
               Après ton burger, on te propose les accompagnements, les sauces et une boisson.
             </p>
 
@@ -234,7 +227,7 @@ export default function Menu() {
               ))}
             </ul>
 
-            {/* Appel à l'action final (Noir & Blanc & Rouge) */}
+            {/* Appel à l'action final */}
             <div className="mt-14 flex flex-col items-start justify-between gap-5 rounded-[2rem] bg-black p-6 text-white sm:flex-row sm:items-center sm:p-8">
               <div>
                 <h3 className="font-display text-3xl font-extrabold tracking-tighter">Prêt à commander ?</h3>
