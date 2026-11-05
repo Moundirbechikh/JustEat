@@ -1,8 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { ArrowRight, Check, ShoppingBag, Flame, Utensils, CreditCard } from 'lucide-react'
+import { ArrowRight, Check, ShoppingBag, Flame, Utensils, CreditCard, Star, Plus } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import logo from '../assets/Logo1.png'
+import fritesImg from '../assets/Frites.png'
+import nuggetsImg from '../assets/Nuggets.png'
+import sauce1 from '../assets/Sauce1.png'
+import sauce2 from '../assets/Sauce2.png'
+import sauce3 from '../assets/Sauce3.png'
+import sauce4 from '../assets/Sauce4.png'
+import sauce5 from '../assets/Sauce5.png'
 import { CATEGORIES, OPTIONS, PRODUCTS } from '../data/menu'
 import { useCart } from '../context/CartContext'
 import { BurgerCard, ItemRow } from '../components/menu/MenuCards'
@@ -19,6 +26,42 @@ const steps = [
   { n: '3', title: 'Paye à la caisse', text: 'Aucun paiement en ligne, aucun compte.', icon: CreditCard },
 ]
 
+const sidesList = [
+  {
+    id: 'frites',
+    name: 'Frites Maison Dorées',
+    desc: 'Frites fraîches coupées sur place, croustillantes et fondantes.',
+    price: 250,
+    img: fritesImg,
+    tag: 'Fait maison',
+    rating: 4.7,
+  },
+  {
+    id: 'nuggets',
+    name: 'Nuggets (6 pièces)',
+    desc: 'Morceaux de poulet tendre enrobés d’une panure croustillante.',
+    price: 450,
+    img: nuggetsImg,
+    rating: 4.6,
+  },
+  {
+    id: 'onion-rings',
+    name: 'Onion Rings (8 pièces)',
+    desc: 'Ronds d’oignons doux frits à la perfection.',
+    price: 350,
+    img: nuggetsImg,
+    rating: 4.8,
+  },
+]
+
+const saucesList = [
+  { id: 'sc1', name: 'Sauce Algérienne', price: 50, desc: 'Épicée et onctueuse', img: sauce4, tag: 'Populaire' },
+  { id: 'sc2', name: 'Sauce Cheddar Fondu', price: 80, desc: 'Fromage chaud fondant', img: sauce3, tag: 'Gourmand' },
+  { id: 'sc3', name: 'Sauce Blanche', price: 50, desc: 'Aillée et fraîche', img: sauce5 },
+  { id: 'sc4', name: 'Sauce Barbecue', price: 50, desc: 'Fumée et sucrée', img: sauce2 },
+  { id: 'sc5', name: 'Sauce Ketchup', price: 40, desc: 'Fraîche et savoureuse', img: sauce1 },
+]
+
 export default function Menu() {
   const reduce = useReducedMotion()
   const { addLines, openCart } = useCart()
@@ -28,13 +71,19 @@ export default function Menu() {
   const [toast, setToast] = useState(null)
   const tabsRef = useRef(null)
 
+  // États pour les points de pagination mobiles
+  const [stepsActiveIndex, setStepsActiveIndex] = useState(0)
+  const [burgerActiveIndex, setBurgerActiveIndex] = useState(0)
+  const [sideActiveIndex, setSideActiveIndex] = useState(0)
+  const [sauceActiveIndex, setSauceActiveIndex] = useState(0)
+  const [drinkActiveIndex, setDrinkActiveIndex] = useState(0)
+
   useEffect(() => {
     if (!toast) return
     const id = setTimeout(() => setToast(null), 2600)
     return () => clearTimeout(id)
   }, [toast])
 
-  // L'onglet actif suit la section visible à l'écran
   useEffect(() => {
     const sections = CATEGORIES.map((c) => document.getElementById(`cat-${c.id}`)).filter(Boolean)
     const observer = new IntersectionObserver(
@@ -65,6 +114,13 @@ export default function Menu() {
     setToast(`${product.name} ajouté`)
   }
 
+  const handleCustomAdd = (item) => {
+    addLines([
+      { productId: item.id, name: item.name, variant: '', options: [], basePrice: item.price, qty: 1 },
+    ])
+    setToast(`${item.name} ajouté`)
+  }
+
   const handleConfirm = (lines) => {
     addLines(lines)
     setSheet(null)
@@ -73,6 +129,13 @@ export default function Menu() {
   }
 
   const activeCategoryLabel = CATEGORIES.find((c) => c.id === active)?.label || 'Menu'
+
+  const handleScroll = (e, setActiveIndex, widthRatio = 0.85) => {
+    const scrollLeft = e.target.scrollLeft
+    const cardWidth = e.target.offsetWidth * widthRatio
+    const index = Math.round(scrollLeft / cardWidth)
+    setActiveIndex(index)
+  }
 
   return (
     <>
@@ -92,39 +155,55 @@ export default function Menu() {
             </div>
           </div>
 
-          {/* Cartes d'étapes (Responsive Desktop & Phone) */}
-          <ol className="mx-auto mt-8 grid max-w-7xl gap-4 sm:grid-cols-3">
-            {steps.map((s) => {
-              const IconComp = s.icon
-              return (
-                <li
-                  key={s.n}
-                  className="group flex items-center gap-4 sm:gap-5 rounded-[2rem] border-2 border-black/10 bg-neutral-50 p-4 sm:p-6 shadow-sm transition hover:border-[#C62F1D] hover:bg-white hover:shadow-md"
-                >
-                  <span className="grid h-12 w-12 sm:h-14 sm:w-14 shrink-0 place-items-center rounded-2xl bg-[#C62F1D] font-display text-xl sm:text-2xl font-extrabold text-white shadow-md">
-                    {s.n}
-                  </span>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="font-display text-base sm:text-lg font-extrabold leading-tight tracking-tight text-black">
-                        {s.title}
-                      </p>
-                      <IconComp size={16} className="text-[#C62F1D] shrink-0" />
+          {/* Cartes d'étapes : Carrousel aperçu sur mobile, grille sur desktop */}
+          <div className="mx-auto max-w-7xl mt-8">
+            <ol 
+              onScroll={(e) => handleScroll(e, setStepsActiveIndex, 0.75)}
+              className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0"
+            >
+              {steps.map((s) => {
+                const IconComp = s.icon
+                return (
+                  <li
+                    key={s.n}
+                    className="w-[78vw] sm:w-auto shrink-0 snap-center group flex items-center gap-4 sm:gap-5 rounded-[2rem] border-2 border-black/10 bg-neutral-50 p-4 sm:p-6 shadow-sm transition hover:border-[#C62F1D] hover:bg-white hover:shadow-md"
+                  >
+                    <span className="grid h-12 w-12 sm:h-14 sm:w-14 shrink-0 place-items-center rounded-2xl bg-[#C62F1D] font-display text-xl sm:text-2xl font-extrabold text-white shadow-md">
+                      {s.n}
+                    </span>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-display text-base sm:text-lg font-extrabold leading-tight tracking-tight text-black">
+                          {s.title}
+                        </p>
+                        <IconComp size={16} className="text-[#C62F1D] shrink-0" />
+                      </div>
+                      <p className="mt-1 text-xs text-neutral-600 sm:text-sm">{s.text}</p>
                     </div>
-                    <p className="mt-1 text-xs text-neutral-600 sm:text-sm">{s.text}</p>
-                  </div>
-                </li>
-              )
-            })}
-          </ol>
+                  </li>
+                )
+              })}
+            </ol>
+
+            {/* Points de pagination Mobile pour les étapes */}
+            <div className="flex justify-center gap-1.5 mt-2 sm:hidden">
+              {steps.map((_, idx) => (
+                <span
+                  key={idx}
+                  className={`h-1.5 rounded-full transition-all ${
+                    stepsActiveIndex === idx ? 'w-6 bg-[#C62F1D]' : 'w-1.5 bg-black/20'
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
         </header>
 
-        {/* ---------- Barre secondaire Sticky (Collée à droite) ---------- */}
+        {/* ---------- Barre secondaire Sticky ---------- */}
         <div className="sticky top-[4.5rem] z-30 pt-2 pb-4 md:top-[5.25rem] pointer-events-none">
           <div className="flex justify-end">
             <div className="pointer-events-auto flex items-center justify-end rounded-l-full bg-white py-3.5 pl-6 pr-0 shadow-xl shadow-black/10 border-y border-l border-neutral-200">
               
-              {/* Desktop : Tous les onglets alignés à droite */}
               <div
                 ref={tabsRef}
                 className="hidden md:flex items-center gap-2 pr-6 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -147,7 +226,6 @@ export default function Menu() {
                 ))}
               </div>
 
-              {/* Mobile : Section active */}
               <div className="flex md:hidden items-center pr-4">
                 <AnimatePresence mode="wait">
                   <motion.span
@@ -167,14 +245,12 @@ export default function Menu() {
           </div>
         </div>
 
-        {/* ---------- SECTION BURGERS (Rouge) avec Logo placé à droite ---------- */}
+        {/* ---------- SECTION BURGERS (Rouge) ---------- */}
         <section
           id="cat-burger"
           className="scroll-mt-32 rounded-t-[2.5rem] bg-[#C62F1D] px-5 pb-20 pt-12 text-white lg:px-10"
         >
           <div className="mx-auto max-w-7xl">
-            
-            {/* Header de la section avec Titre à gauche et Logo à droite */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-8">
               <div className="max-w-2xl">
                 <h2 className="font-display text-3xl font-extrabold tracking-tighter sm:text-5xl md:text-6xl">
@@ -185,68 +261,222 @@ export default function Menu() {
                 </p>
               </div>
 
-              {/* Logo positionné dans l'encadré supérieur droit de la section rouge */}
-              <div className="shrink-0 self-start sm:self-center">
+              <div className="hidden sm:block shrink-0 self-center">
                 <img
                   src={logo}
                   alt="Just Burgers"
-                  className="h-16 w-auto object-contain sm:h-20 md:h-24 drop-shadow-md"
+                  className="h-20 md:h-24 w-auto object-contain drop-shadow-md"
                 />
               </div>
             </div>
 
-            {/* Carrousel 1 par 1 sur Mobile / Grille sur Desktop */}
-            <div className="mt-6 flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 md:grid-cols-4 sm:overflow-visible sm:pb-0">
+            <div 
+              onScroll={(e) => handleScroll(e, setBurgerActiveIndex)}
+              className="mt-6 flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 md:grid-cols-4 sm:overflow-visible sm:pb-0"
+            >
               {byCategory('burger').map((p, i) => (
                 <div key={p.id} className="w-[85vw] shrink-0 snap-center sm:w-full">
                   <BurgerCard product={p} index={i} onAdd={handleAdd} />
                 </div>
               ))}
             </div>
+
+            <div className="flex justify-center gap-1.5 mt-4 sm:hidden">
+              {byCategory('burger').map((_, idx) => (
+                <span
+                  key={idx}
+                  className={`h-1.5 rounded-full transition-all ${
+                    burgerActiveIndex === idx ? 'w-6 bg-white' : 'w-1.5 bg-white/40'
+                  }`}
+                />
+              ))}
+            </div>
           </div>
         </section>
 
-        {/* ---------- Accompagnements ---------- */}
+        {/* ---------- ACCOMPAGNEMENTS ---------- */}
         <section id="cat-side" className="scroll-mt-32 px-5 pt-16 lg:px-10">
           <div className="mx-auto max-w-7xl">
-            <h2 className="font-display text-3xl font-extrabold tracking-tighter text-black sm:text-4xl md:text-5xl">
-              Pour accompagner
-            </h2>
-            <ul className="mt-6 flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible sm:pb-0">
-              {byCategory('side').map((p, i) => (
-                <li key={p.id} className="w-[85vw] shrink-0 snap-center sm:w-full">
-                  <ItemRow product={p} index={i} onAdd={handleAdd} />
-                </li>
+            <div className="mb-8">
+              <h2 className="font-display text-3xl font-extrabold tracking-tighter text-black sm:text-4xl md:text-5xl">
+                Pour accompagner
+              </h2>
+              <p className="mt-1 text-sm text-neutral-600">
+                Frites fraîches maison et snacks croustillants.
+              </p>
+            </div>
+
+            <div 
+              onScroll={(e) => handleScroll(e, setSideActiveIndex)}
+              className="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible sm:pb-0"
+            >
+              {sidesList.map((item) => (
+                <div
+                  key={item.id}
+                  className="w-[85vw] shrink-0 snap-center sm:w-full group relative mt-12 flex flex-col justify-between rounded-[2rem] bg-white p-6 pt-0 text-neutral-900 shadow-xl shadow-black/10 border border-neutral-100"
+                >
+                  {item.tag && (
+                    <span className="absolute right-4 top-4 rounded-full bg-[#F4A507] px-3 py-1 font-display text-xs font-bold text-neutral-900 shadow-sm z-10">
+                      {item.tag}
+                    </span>
+                  )}
+
+                  <div className="relative -mt-12 mx-auto flex h-36 items-center justify-center">
+                    <img
+                      src={item.img}
+                      alt={item.name}
+                      loading="lazy"
+                      className="h-32 w-auto object-contain drop-shadow-2xl transition-transform duration-500 group-hover:scale-105"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="mt-2 flex items-baseline justify-between gap-3">
+                      <h3 className="font-display text-xl font-extrabold tracking-tighter text-black">
+                        {item.name}
+                      </h3>
+                      <span className="whitespace-nowrap text-lg font-extrabold text-[#C62F1D]">
+                        {item.price} DA
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs text-neutral-600 leading-relaxed">{item.desc}</p>
+                  </div>
+
+                  <div className="mt-6 pt-4 border-t border-neutral-100 flex items-center justify-between">
+                    <div className="flex items-center gap-1 text-xs font-bold text-amber-500">
+                      <Star size={14} fill="currentColor" />
+                      <span>{item.rating}</span>
+                    </div>
+
+                    <button
+                      onClick={() => handleCustomAdd(item)}
+                      className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 font-display text-xs font-bold text-white bg-[#C62F1D] transition-all hover:bg-black"
+                    >
+                      <Plus size={14} />
+                      <span>Commander</span>
+                    </button>
+                  </div>
+                </div>
               ))}
-            </ul>
+            </div>
+
+            <div className="flex justify-center gap-1.5 mt-4 sm:hidden">
+              {sidesList.map((_, idx) => (
+                <span
+                  key={idx}
+                  className={`h-1.5 rounded-full transition-all ${
+                    sideActiveIndex === idx ? 'w-6 bg-[#C62F1D]' : 'w-1.5 bg-black/20'
+                  }`}
+                />
+              ))}
+            </div>
           </div>
         </section>
 
-        {/* ---------- Sauces ---------- */}
-        <section id="cat-sauce" className="scroll-mt-32 px-5 pb-16 pt-14 lg:px-10">
+        {/* ---------- SAUCES ---------- */}
+        <section id="cat-sauce" className="scroll-mt-32 px-5 pb-16 pt-14 lg:px-10 bg-neutral-50/50 border-y border-black/5 mt-12">
           <div className="mx-auto max-w-7xl">
-            <h2 className="font-display text-3xl font-extrabold tracking-tighter text-black sm:text-4xl md:text-5xl">Sauces</h2>
-            <ul className="mt-6 flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible sm:pb-0">
-              {byCategory('sauce').map((p, i) => (
-                <li key={p.id} className="w-[85vw] shrink-0 snap-center sm:w-full">
-                  <ItemRow product={p} index={i} onAdd={handleAdd} />
-                </li>
+            <div className="mb-8">
+              <h2 className="font-display text-3xl font-extrabold tracking-tighter text-black sm:text-4xl md:text-5xl">
+                Sauces
+              </h2>
+              <p className="mt-1 text-sm text-neutral-600">
+                Choisis tes pots de sauces en supplément pour tremper tes frites et nuggets.
+              </p>
+            </div>
+
+            <div 
+              onScroll={(e) => handleScroll(e, setSauceActiveIndex)}
+              className="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 sm:overflow-visible sm:pb-0"
+            >
+              {saucesList.map((sauce) => (
+                <div
+                  key={sauce.id}
+                  className="w-[85vw] shrink-0 snap-center sm:w-full group relative mt-12 flex flex-col justify-between rounded-[2rem] bg-white p-6 pt-0 text-neutral-900 shadow-xl shadow-black/10 border border-neutral-100"
+                >
+                  {sauce.tag && (
+                    <span className="absolute right-4 top-4 rounded-full bg-[#F4A507] px-3 py-1 font-display text-xs font-bold text-neutral-900 shadow-sm z-10">
+                      {sauce.tag}
+                    </span>
+                  )}
+
+                  <div className="relative -mt-12 mx-auto flex h-36 items-center justify-center">
+                    <img
+                      src={sauce.img}
+                      alt={sauce.name}
+                      loading="lazy"
+                      className="h-32 w-auto object-contain drop-shadow-2xl transition-transform duration-500 group-hover:scale-105"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="mt-2 flex items-baseline justify-between gap-3">
+                      <h3 className="font-display text-lg font-extrabold tracking-tighter text-black">
+                        {sauce.name}
+                      </h3>
+                      <span className="whitespace-nowrap text-base font-extrabold text-[#C62F1D]">
+                        +{sauce.price} DA
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs text-neutral-600 leading-relaxed">{sauce.desc}</p>
+                  </div>
+
+                  <div className="mt-6 pt-4 border-t border-neutral-100 flex items-center justify-between">
+                    <div className="flex items-center gap-1 text-xs font-bold text-amber-500">
+                      <Star size={14} fill="currentColor" />
+                      <span>4.9</span>
+                    </div>
+
+                    <button
+                      onClick={() => handleCustomAdd(sauce)}
+                      className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 font-display text-xs font-bold text-white bg-[#C62F1D] transition-all hover:bg-black"
+                    >
+                      <Plus size={14} />
+                      <span>Ajouter</span>
+                    </button>
+                  </div>
+                </div>
               ))}
-            </ul>
+            </div>
+
+            <div className="flex justify-center gap-1.5 mt-4 sm:hidden">
+              {saucesList.map((_, idx) => (
+                <span
+                  key={idx}
+                  className={`h-1.5 rounded-full transition-all ${
+                    sauceActiveIndex === idx ? 'w-6 bg-[#C62F1D]' : 'w-1.5 bg-black/20'
+                  }`}
+                />
+              ))}
+            </div>
           </div>
         </section>
 
-        {/* ---------- Boissons ---------- */}
-        <section id="cat-drink" className="scroll-mt-32 bg-white border-t border-black/10 px-5 pb-36 pt-16 text-black lg:px-10">
+        {/* ---------- BOISSONS (Avec l'emoji d'origine et le composant ItemRow) ---------- */}
+        <section id="cat-drink" className="scroll-mt-32 bg-white px-5 pb-36 pt-16 text-black lg:px-10">
           <div className="mx-auto max-w-7xl">
             <h2 className="font-display text-3xl font-extrabold tracking-tighter sm:text-4xl md:text-5xl">Boissons</h2>
-            <ul className="mt-6 flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible sm:pb-0">
+            <ul 
+              onScroll={(e) => handleScroll(e, setDrinkActiveIndex)}
+              className="mt-6 flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible sm:pb-0"
+            >
               {byCategory('drink').map((p, i) => (
                 <li key={p.id} className="w-[85vw] shrink-0 snap-center sm:w-full">
                   <ItemRow product={p} index={i} onAdd={handleAdd} />
                 </li>
               ))}
             </ul>
+
+            <div className="flex justify-center gap-1.5 mt-4 sm:hidden">
+              {byCategory('drink').map((_, idx) => (
+                <span
+                  key={idx}
+                  className={`h-1.5 rounded-full transition-all ${
+                    drinkActiveIndex === idx ? 'w-6 bg-[#C62F1D]' : 'w-1.5 bg-black/20'
+                  }`}
+                />
+              ))}
+            </div>
 
             {/* Appel à l'action final */}
             <div className="mt-14 flex flex-col items-start justify-between gap-5 rounded-[2rem] bg-black p-6 text-white sm:flex-row sm:items-center sm:p-8">

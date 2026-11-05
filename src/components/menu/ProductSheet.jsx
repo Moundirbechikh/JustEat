@@ -240,7 +240,6 @@ export default function ProductSheet({ product, products, optionsMap, onClose, o
           {groups.length > 0 && (
             <section className={options.length ? 'mt-8' : ''}>
               <div className="flex items-center gap-2">
-                <Sparkles size={20} className="text-[#C62F1D]" />
                 <h3 className="font-display text-xl font-extrabold tracking-tighter">
                   Complète ton repas
                 </h3>
