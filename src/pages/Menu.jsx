@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { ArrowRight, Check, ShoppingBag, Sparkles } from 'lucide-react'
+import { ArrowRight, Check, ShoppingBag } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import logo from '../assets/Logo1.png'
 import { CATEGORIES, OPTIONS, PRODUCTS } from '../data/menu'
@@ -117,16 +117,11 @@ export default function Menu() {
           </ol>
         </header>
 
-        {/* ---------- Barre secondaire (Fond blanc, collée à droite sur desktop, hauteur plus grande) ---------- */}
+        {/* ---------- Barre secondaire (Sans logo, collée à droite, largeur adaptée au texte sur mobile) ---------- */}
         <div className="sticky top-[4.5rem] z-30 pt-2 pb-4 md:top-[5.25rem] pointer-events-none">
           <div className="flex justify-end">
-            <div className="pointer-events-auto flex items-center justify-between gap-6 w-full md:w-auto rounded-l-full bg-white py-3 pl-4 pr-0 md:pl-5 shadow-xl shadow-black/10 border-y border-l border-neutral-200">
+            <div className="pointer-events-auto flex items-center justify-end rounded-l-full bg-white py-3.5 pl-6 pr-0 shadow-xl shadow-black/10 border-y border-l border-neutral-200">
               
-              {/* Logo avec fond rouge uniquement sous le logo */}
-              <div className="flex items-center rounded-2xl bg-[#C62F1D] px-4 py-2 shadow-sm">
-                <img src={logo} alt="Just Burgers" className="h-6 w-auto object-contain brightness-0 invert" />
-              </div>
-
               {/* Desktop : Tous les boutons de catégories alignés à droite */}
               <div
                 ref={tabsRef}
@@ -139,7 +134,7 @@ export default function Menu() {
                     data-tab={c.id}
                     onClick={() => goTo(c.id)}
                     aria-current={active === c.id ? 'true' : undefined}
-                    className={`shrink-0 rounded-full px-5 py-2.5 text-sm font-bold transition-all ${
+                    className={`shrink-0 rounded-full px-6 py-2.5 text-sm font-bold transition-all ${
                       active === c.id
                         ? 'bg-[#C62F1D] text-white shadow-md scale-105'
                         : 'bg-neutral-100 text-neutral-800 hover:bg-neutral-200'
@@ -150,7 +145,7 @@ export default function Menu() {
                 ))}
               </div>
 
-              {/* Mobile : Affichage fluide de la section active avec animation */}
+              {/* Mobile : Largeur ajustée exactement au titre de la section active avec écriture plus grande */}
               <div className="flex md:hidden items-center pr-4">
                 <AnimatePresence mode="wait">
                   <motion.span
@@ -159,7 +154,7 @@ export default function Menu() {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -10 }}
                     transition={{ duration: 0.2 }}
-                    className="rounded-full bg-[#C62F1D] px-5 py-2 text-xs font-extrabold text-white shadow-sm"
+                    className="inline-block rounded-full bg-[#C62F1D] px-6 py-2.5 text-sm font-extrabold text-white shadow-sm"
                   >
                     {activeCategoryLabel}
                   </motion.span>
