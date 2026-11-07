@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { ArrowRight, Menu, Star, X } from 'lucide-react'
+import { ArrowRight, Menu, ShoppingBag, X } from 'lucide-react'
+import { useCart } from '../context/CartContext'
 
 const links = [
   { to: '/', label: 'Accueil', end: true },
@@ -16,6 +17,9 @@ export default function Navbar() {
   const { pathname, hash } = useLocation()
   const navigate = useNavigate()
   const reduce = useReducedMotion()
+  const { count, openCart } = useCart()
+
+  const cartLabel = `Ouvrir le panier (${count} article${count > 1 ? 's' : ''})`
 
   // Défilement fluide automatique quand le hash #reviews est dans l'URL
   useEffect(() => {
@@ -41,6 +45,12 @@ export default function Navbar() {
     }
   }
 
+  // Ouvre le panier (et ferme le menu mobile s'il est ouvert)
+  const handleCartClick = () => {
+    setOpen(false)
+    openCart()
+  }
+
   const activeTo = links.find((l) =>
     l.end ? pathname === l.to : pathname.startsWith(l.to)
   )?.to
@@ -60,7 +70,7 @@ export default function Navbar() {
   return (
     <header className="pointer-events-none fixed inset-x-0 top-5 z-50 md:top-6">
       <div className="pointer-events-auto font-display ml-auto flex h-12 w-fit items-center gap-3 rounded-l-full bg-[#C62F1D] pl-5 pr-2 shadow-lg shadow-black/15 lg:h-14 lg:gap-4 lg:pl-8 lg:pr-8">
-        
+
         {/* Logo / Nom du restaurant */}
         <Link
           to="/"
@@ -127,6 +137,36 @@ export default function Navbar() {
               </NavLink>
             )
           ))}
+
+          {/* Panier (Ordinateur) : ouvre le tiroir du panier */}
+          <button
+            type="button"
+            onClick={handleCartClick}
+            onMouseEnter={() => setHovered('cart')}
+            onFocus={() => setHovered('cart')}
+            onBlur={() => setHovered(null)}
+            aria-label={cartLabel}
+            className="relative flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[0.9rem] font-semibold text-white"
+          >
+            {pillTo === 'cart' && (
+              <motion.span
+                layoutId="nav-pill"
+                className="absolute inset-0 rounded-full bg-white/20"
+                transition={
+                  reduce
+                    ? { duration: 0 }
+                    : { type: 'spring', stiffness: 420, damping: 34 }
+                }
+              />
+            )}
+            <ShoppingBag size={17} className="relative" />
+            <span className="relative">Panier</span>
+            {count > 0 && (
+              <span className="relative grid h-5 min-w-5 place-items-center rounded-full bg-[#F4A507] px-1 text-xs font-extrabold text-neutral-900">
+                {count}
+              </span>
+            )}
+          </button>
         </nav>
 
         <Link
@@ -139,6 +179,21 @@ export default function Navbar() {
             className="transition-transform group-hover:translate-x-1"
           />
         </Link>
+
+        {/* Icône Panier Mobile */}
+        <button
+          type="button"
+          onClick={handleCartClick}
+          aria-label={cartLabel}
+          className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full text-white transition hover:bg-white/15 lg:hidden"
+        >
+          <ShoppingBag size={22} />
+          {count > 0 && (
+            <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-[#F4A507] px-1 text-[10px] font-extrabold leading-none text-neutral-900">
+              {count}
+            </span>
+          )}
+        </button>
 
         {/* Bouton Menu Mobile */}
         <button
@@ -202,6 +257,22 @@ export default function Navbar() {
                     )}
                   </li>
                 ))}
+
+                {/* Panier (Téléphone) */}
+                <li>
+                  <button
+                    type="button"
+                    onClick={handleCartClick}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-3 text-left text-2xl font-display font-bold text-white tracking-tight transition hover:translate-x-1 hover:bg-white/15"
+                  >
+                    Panier
+                    {count > 0 && (
+                      <span className="grid h-6 min-w-6 place-items-center rounded-full bg-[#F4A507] px-1.5 text-sm font-extrabold text-neutral-900">
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                </li>
               </ul>
 
               <Link

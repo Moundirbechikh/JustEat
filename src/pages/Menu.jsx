@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ArrowRight, Check, ShoppingBag, Flame, Utensils, CreditCard, Star, Plus } from 'lucide-react'
-import Navbar from '../components/Navbar'
-import logo from '../assets/Logo1.png'
+import fond1 from '../assets/Fond1.png'
+import fond2 from '../assets/Fond3.png'
 import fritesImg from '../assets/Frites.png'
 import nuggetsImg from '../assets/Nuggets.png'
 import sauce1 from '../assets/Sauce1.png'
@@ -10,12 +10,11 @@ import sauce2 from '../assets/Sauce2.png'
 import sauce3 from '../assets/Sauce3.png'
 import sauce4 from '../assets/Sauce4.png'
 import sauce5 from '../assets/Sauce5.png'
+import Ognions from '../assets/Ognions.png'
 import { CATEGORIES, OPTIONS, PRODUCTS } from '../data/menu'
 import { useCart } from '../context/CartContext'
 import { BurgerCard, ItemRow } from '../components/menu/MenuCards'
 import ProductSheet from '../components/menu/ProductSheet'
-import CartDrawer from '../components/menu/CartDrawer'
-import CartBar from '../components/menu/CartBar'
 
 const products = PRODUCTS.filter((p) => p.available !== false)
 const byCategory = (id) => products.filter((p) => p.category === id)
@@ -49,7 +48,7 @@ const sidesList = [
     name: 'Onion Rings (8 pièces)',
     desc: 'Ronds d’oignons doux frits à la perfection.',
     price: 350,
-    img: nuggetsImg,
+    img: Ognions,
     rating: 4.8,
   },
 ]
@@ -139,8 +138,6 @@ export default function Menu() {
 
   return (
     <>
-      <Navbar />
-
       <main className="bg-white text-black">
         {/* ---------- En-tête Principal ---------- */}
         <header className="px-5 pb-8 pt-20 md:pt-24 lg:px-10">
@@ -157,7 +154,7 @@ export default function Menu() {
 
           {/* Cartes d'étapes : Carrousel aperçu sur mobile, grille sur desktop */}
           <div className="mx-auto max-w-7xl mt-8">
-            <ol 
+            <ol
               onScroll={(e) => handleScroll(e, setStepsActiveIndex, 0.75)}
               className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0"
             >
@@ -203,7 +200,6 @@ export default function Menu() {
         <div className="sticky top-[4.5rem] z-30 pt-2 pb-4 md:top-[5.25rem] pointer-events-none">
           <div className="flex justify-end">
             <div className="pointer-events-auto flex items-center justify-end rounded-l-full bg-white py-3.5 pl-6 pr-0 shadow-xl shadow-black/10 border-y border-l border-neutral-200">
-              
               <div
                 ref={tabsRef}
                 className="hidden md:flex items-center gap-2 pr-6 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -240,7 +236,6 @@ export default function Menu() {
                   </motion.span>
                 </AnimatePresence>
               </div>
-
             </div>
           </div>
         </div>
@@ -248,9 +243,18 @@ export default function Menu() {
         {/* ---------- SECTION BURGERS (Rouge) ---------- */}
         <section
           id="cat-burger"
-          className="scroll-mt-32 rounded-t-[2.5rem] bg-[#C62F1D] px-5 pb-20 pt-12 text-white lg:px-10"
+          className="relative overflow-hidden scroll-mt-32 rounded-t-[2.5rem] bg-[#C62F1D] px-5 pb-16 sm:pb-36 pt-12 text-white lg:px-10"
         >
-          <div className="mx-auto max-w-7xl">
+          {/* Image Fond1.png inclinée en haut à droite (desktop) */}
+          <div className="hidden sm:block absolute -top-8 right-8 md:right-25 pointer-events-none z-0">
+            <img
+              src={fond1}
+              alt="Burger d'ambiance"
+              className="h-44 md:h-60 lg:h-60 w-auto object-contain scale-125 md:scale-140 rotate-[22deg] -translate-y-4 md:-translate-y-6 translate-x-4 md:translate-x-6 opacity-95 drop-shadow-2xl"
+            />
+          </div>
+
+          <div className="relative z-10 mx-auto max-w-7xl">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-8">
               <div className="max-w-2xl">
                 <h2 className="font-display text-3xl font-extrabold tracking-tighter sm:text-5xl md:text-6xl">
@@ -260,17 +264,9 @@ export default function Menu() {
                   Après ton burger, on te propose les accompagnements, les sauces et une boisson.
                 </p>
               </div>
-
-              <div className="hidden sm:block shrink-0 self-center">
-                <img
-                  src={logo}
-                  alt="Just Burgers"
-                  className="h-20 md:h-24 w-auto object-contain drop-shadow-md"
-                />
-              </div>
             </div>
 
-            <div 
+            <div
               onScroll={(e) => handleScroll(e, setBurgerActiveIndex)}
               className="mt-6 flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 md:grid-cols-4 sm:overflow-visible sm:pb-0"
             >
@@ -294,19 +290,41 @@ export default function Menu() {
           </div>
         </section>
 
+        {/* ---------- IMAGE DE TRANSITION POUR MOBILE ONLY ---------- */}
+        <div className="relative z-20 mx-auto max-w-7xl px-5 pointer-events-none -mt-12 mb-2 flex justify-end sm:hidden">
+          <img
+            src={fond2}
+            alt="Accompagnements d'ambiance"
+            className="h-24 w-auto object-contain drop-shadow-xl translate-x-3"
+          />
+        </div>
+
         {/* ---------- ACCOMPAGNEMENTS ---------- */}
-        <section id="cat-side" className="scroll-mt-32 px-5 pt-16 lg:px-10">
+        <section id="cat-side" className="relative scroll-mt-32 px-5 pt-4 lg:px-10">
           <div className="mx-auto max-w-7xl">
-            <div className="mb-8">
-              <h2 className="font-display text-3xl font-extrabold tracking-tighter text-black sm:text-4xl md:text-5xl">
-                Pour accompagner
-              </h2>
-              <p className="mt-1 text-sm text-neutral-600">
-                Frites fraîches maison et snacks croustillants.
-              </p>
+            {/* Zone Titre : normal sur mobile, remonté + grille 2 colonnes avec Fond3.png sur desktop */}
+            <div className="relative z-20 mb-8 sm:mb-0 sm:-mt-24 md:-mt-32 sm:grid sm:grid-cols-2 sm:items-end">
+              <div>
+                <h2 className="font-display text-3xl font-extrabold tracking-tighter text-black sm:text-4xl md:text-5xl">
+                  Pour accompagner
+                </h2>
+                <p className="mt-1 text-sm text-neutral-600">
+                  Frites fraîches maison et snacks croustillants.
+                </p>
+              </div>
+
+              {/* Image Fond3.png cachée sur mobile, visible uniquement sur desktop */}
+              <div className="hidden sm:flex justify-end pointer-events-none">
+                <img
+                  src={fond2}
+                  alt="Accompagnements d'ambiance"
+                  className="h-44 md:h-56 lg:h-64 w-auto object-contain drop-shadow-xl translate-x-6"
+                />
+              </div>
             </div>
 
-            <div 
+            {/* Cartes d'accompagnements */}
+            <div
               onScroll={(e) => handleScroll(e, setSideActiveIndex)}
               className="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible sm:pb-0"
             >
@@ -349,6 +367,7 @@ export default function Menu() {
                     </div>
 
                     <button
+                      type="button"
                       onClick={() => handleCustomAdd(item)}
                       className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 font-display text-xs font-bold text-white bg-[#C62F1D] transition-all hover:bg-black"
                     >
@@ -385,7 +404,7 @@ export default function Menu() {
               </p>
             </div>
 
-            <div 
+            <div
               onScroll={(e) => handleScroll(e, setSauceActiveIndex)}
               className="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 sm:overflow-visible sm:pb-0"
             >
@@ -428,6 +447,7 @@ export default function Menu() {
                     </div>
 
                     <button
+                      type="button"
                       onClick={() => handleCustomAdd(sauce)}
                       className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 font-display text-xs font-bold text-white bg-[#C62F1D] transition-all hover:bg-black"
                     >
@@ -452,11 +472,11 @@ export default function Menu() {
           </div>
         </section>
 
-        {/* ---------- BOISSONS (Avec l'emoji d'origine et le composant ItemRow) ---------- */}
-        <section id="cat-drink" className="scroll-mt-32 bg-white px-5 pb-36 pt-16 text-black lg:px-10">
+        {/* ---------- BOISSONS ---------- */}
+        <section id="cat-drink" className="scroll-mt-32 bg-white px-5 pb-16 pt-16 text-black lg:px-10">
           <div className="mx-auto max-w-7xl">
             <h2 className="font-display text-3xl font-extrabold tracking-tighter sm:text-4xl md:text-5xl">Boissons</h2>
-            <ul 
+            <ul
               onScroll={(e) => handleScroll(e, setDrinkActiveIndex)}
               className="mt-6 flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible sm:pb-0"
             >
@@ -497,10 +517,6 @@ export default function Menu() {
           </div>
         </section>
       </main>
-
-      {/* ---------- Éléments flottants ---------- */}
-      <CartBar />
-      <CartDrawer />
 
       <AnimatePresence>
         {sheet && (
