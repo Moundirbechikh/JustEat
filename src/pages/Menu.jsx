@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { ArrowRight, Check, ShoppingBag, Flame, Utensils, CreditCard, Star, Plus } from 'lucide-react'
+import { ArrowRight, Check, ShoppingBag, Flame, Utensils, CreditCard, Star, Plus, Store } from 'lucide-react'
 import fond1 from '../assets/Fond1.png'
 import fond2 from '../assets/Fond3.png'
 import fritesImg from '../assets/Frites.png'
@@ -63,7 +63,7 @@ const saucesList = [
 
 export default function Menu() {
   const reduce = useReducedMotion()
-  const { addLines, openCart } = useCart()
+  const { addLines, openCart, count } = useCart()
 
   const [active, setActive] = useState('burger')
   const [sheet, setSheet] = useState(null)
@@ -497,23 +497,47 @@ export default function Menu() {
                 />
               ))}
             </div>
+          </div>
+        </section>
 
-            {/* Appel à l'action final */}
-            <div className="mt-14 flex flex-col items-start justify-between gap-5 rounded-[2rem] bg-black p-6 text-white sm:flex-row sm:items-center sm:p-8">
-              <div>
-                <h3 className="font-display text-2xl font-extrabold tracking-tighter sm:text-3xl">Prêt à commander ?</h3>
-                <p className="mt-1 text-xs text-white/80 sm:text-sm">Vérifie ton panier, valide avec ton prénom, et paye à la caisse.</p>
+        {/* ---------- PRÊT À COMMANDER (même design que « Commande en ligne » de l'accueil) ---------- */}
+        <section className="relative rounded-t-[2.5rem] bg-[#C62F1D] px-5 py-12 text-white md:py-16 lg:px-10">
+          <div className="mx-auto max-w-7xl">
+            <motion.div
+              initial={reduce ? false : { opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-50px' }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              className="flex flex-col items-start justify-between gap-6  border-t border-white/20 py-12 md:flex-row md:items-center"
+            >
+              <div className="max-w-2xl">
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1 font-display text-xs font-bold uppercase tracking-wider text-white backdrop-blur-sm">
+                  <Store size={14} />
+                  <span>Paiement sur place uniquement</span>
+                </div>
+                <h2 className="mt-3 font-display text-3xl font-extrabold tracking-tighter text-white sm:text-4xl md:text-5xl">
+                  Prêt à commander ? Règle à la caisse.
+                </h2>
+                <p className="mt-2 text-base text-white/90 sm:text-lg">
+                  Vérifie ton panier, valide avec ton prénom et ton numéro, puis paie directement au comptoir lors du retrait. Pas de carte bancaire, pas de compte.
+                </p>
               </div>
+
               <button
                 type="button"
                 onClick={openCart}
-                className="group inline-flex shrink-0 items-center gap-2 rounded-full bg-[#C62F1D] px-7 py-3.5 font-bold text-white transition hover:scale-105 hover:bg-white hover:text-black text-sm"
+                className="inline-flex shrink-0 items-center gap-2 rounded-full bg-white px-8 py-4 font-display text-base font-bold text-[#C62F1D] shadow-lg transition-all duration-300 hover:scale-105 hover:bg-neutral-900 hover:text-white"
               >
-                <ShoppingBag size={20} />
-                Voir mon panier
-                <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
+                <ShoppingBag size={18} />
+                <span>Voir mon panier</span>
+                {count > 0 && (
+                  <span className="grid h-6 min-w-6 place-items-center rounded-full bg-[#F4A507] px-1.5 text-xs font-extrabold text-neutral-900">
+                    {count}
+                  </span>
+                )}
+                <ArrowRight size={18} />
               </button>
-            </div>
+            </motion.div>
           </div>
         </section>
       </main>
