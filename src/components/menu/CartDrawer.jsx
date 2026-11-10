@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowLeft, ArrowRight, Check, Minus, Package, Plus, ShoppingBag, Store, Trash2, X } from 'lucide-react'
 import { useCart } from '../../context/CartContext'
 import { createOrder } from '../../services/api'
 import useBodyLock from '../../hooks/useBodyLock'
 import { formatPrice } from '../../utils/format'
+
+const TABLE_PAYMENT_NOTE = 'On t’apporte ta commande à table. Tu paies à la caisse en partant.'
 
 // Numéros algériens : 05 / 06 / 07 + 8 chiffres (accepte +213 et les espaces)
 function normalizePhone(value) {
@@ -23,7 +25,9 @@ const ORDER_TYPES = [
 ]
 
 export default function CartDrawer() {
-  const { items, count, total, open, closeCart, setQty, removeLine, clear } = useCart()
+  const { items, count, total, open, table, closeCart, setQty, removeLine, clear } = useCart()
+  const navigate = useNavigate()
+  const location = useLocation()
 
   const [step, setStep] = useState('cart') // cart | form | done
   const [form, setForm] = useState({ name: '', phone: '', type: 'sur-place', note: '' })
@@ -53,6 +57,13 @@ export default function CartDrawer() {
     }
   }, [open, sending])
 
+  useEffect(() => {
+    if (!open) return
+    if (table) {
+      setForm((f) => ({ ...f, type: 'sur-place' }))
+    }
+  }, [open, table])
+
   const update = (field) => (e) => {
     setForm((f) => ({ ...f, [field]: e.target.value }))
     setErrors((er) => ({ ...er, [field]: undefined }))
@@ -63,8 +74,12 @@ export default function CartDrawer() {
     if (sending) return
 
     const found = {}
-    if (form.name.trim().length < 2) found.name = 'Entre ton prénom.'
-    if (!isValidPhone(form.phone)) found.phone = 'Numéro invalide (ex. 0555 12 34 56).'
+    if (table) {
+      if (form.name.trim() && form.name.trim().length < 2) found.name = 'Entre ton prénom.'
+    } else {
+      if (form.name.trim().length < 2) found.name = 'Entre ton prénom.'
+      if (!isValidPhone(form.phone)) found.phone = 'Numéro invalide (ex. 0555 12 34 56).'
+    }
     setErrors(found)
     if (Object.keys(found).length) return
 
@@ -73,10 +88,10 @@ export default function CartDrawer() {
     try {
       const res = await createOrder({
         name: form.name.trim(),
-        phone: normalizePhone(form.phone),
-        type: form.type,
+        phone: table ? '' : normalizePhone(form.phone),
+        type: 'sur-place',
+        table: table || undefined,
         note: form.note.trim(),
-        // Le script recalcule le total à partir des prix du Sheet : ce total n'est qu'indicatif
         total,
         items: items.map((i) => ({
           id: i.productId,
@@ -100,6 +115,8 @@ export default function CartDrawer() {
     `mt-1.5 w-full rounded-2xl border-2 bg-white px-4 py-3 text-base outline-none transition focus:border-[#C62F1D] ${
       errors[field] ? 'border-[#C62F1D]' : 'border-neutral-200'
     }`
+
+  const isTableMode = Boolean(table)
 
   return (
     <AnimatePresence>
@@ -254,55 +271,77 @@ export default function CartDrawer() {
             {step === 'form' && (
               <form onSubmit={submit} className="flex flex-1 flex-col overflow-hidden" noValidate>
                 <div className="flex-1 overflow-y-auto overscroll-contain p-5">
-                  <label className="block font-bold">
-                    Ton prénom
-                    <input
-                      type="text"
-                      value={form.name}
-                      onChange={update('name')}
-                      autoComplete="given-name"
-                      autoFocus
-                      placeholder="Ex. Yacine"
-                      className={inputClass('name')}
-                    />
-                    {errors.name && <span className="mt-1 block text-sm font-semibold text-[#C62F1D]">{errors.name}</span>}
-                  </label>
+                  {!isTableMode && (
+                    <label className="block font-bold">
+                      Ton prénom
+                      <input
+                        type="text"
+                        value={form.name}
+                        onChange={update('name')}
+                        autoComplete="given-name"
+                        autoFocus
+                        placeholder="Ex. Yacine"
+                        className={inputClass('name')}
+                      />
+                      {errors.name && <span className="mt-1 block text-sm font-semibold text-[#C62F1D]">{errors.name}</span>}
+                    </label>
+                  )}
 
-                  <label className="mt-4 block font-bold">
-                    Ton numéro de téléphone
-                    <input
-                      type="tel"
-                      inputMode="tel"
-                      value={form.phone}
-                      onChange={update('phone')}
-                      autoComplete="tel"
-                      placeholder="0555 12 34 56"
-                      className={inputClass('phone')}
-                    />
-                    {errors.phone && <span className="mt-1 block text-sm font-semibold text-[#C62F1D]">{errors.phone}</span>}
-                  </label>
+                  {isTableMode && (
+                    <label className="block font-bold">
+                      Ton prénom (facultatif)
+                      <input
+                        type="text"
+                        value={form.name}
+                        onChange={update('name')}
+                        autoComplete="given-name"
+                        autoFocus
+                        placeholder="Ex. Yacine"
+                        className={inputClass('name')}
+                      />
+                      {errors.name && <span className="mt-1 block text-sm font-semibold text-[#C62F1D]">{errors.name}</span>}
+                    </label>
+                  )}
 
-                  <fieldset className="mt-4">
-                    <legend className="font-bold">Tu manges…</legend>
-                    <div className="mt-1.5 grid grid-cols-2 gap-2">
-                      {ORDER_TYPES.map(({ id, label, icon: Icon }) => (
-                        <button
-                          key={id}
-                          type="button"
-                          onClick={() => setForm((f) => ({ ...f, type: id }))}
-                          aria-pressed={form.type === id}
-                          className={`flex items-center justify-center gap-2 rounded-2xl border-2 py-3 font-bold transition ${
-                            form.type === id
-                              ? 'border-[#C62F1D] bg-[#C62F1D] text-white'
-                              : 'border-neutral-200 hover:border-[#C62F1D]'
-                          }`}
-                        >
-                          <Icon size={18} />
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </fieldset>
+                  {!isTableMode && (
+                    <label className="mt-4 block font-bold">
+                      Ton numéro de téléphone
+                      <input
+                        type="tel"
+                        inputMode="tel"
+                        value={form.phone}
+                        onChange={update('phone')}
+                        autoComplete="tel"
+                        placeholder="0555 12 34 56"
+                        className={inputClass('phone')}
+                      />
+                      {errors.phone && <span className="mt-1 block text-sm font-semibold text-[#C62F1D]">{errors.phone}</span>}
+                    </label>
+                  )}
+
+                  {!isTableMode && (
+                    <fieldset className="mt-4">
+                      <legend className="font-bold">Tu manges…</legend>
+                      <div className="mt-1.5 grid grid-cols-2 gap-2">
+                        {ORDER_TYPES.map(({ id, label, icon: Icon }) => (
+                          <button
+                            key={id}
+                            type="button"
+                            onClick={() => setForm((f) => ({ ...f, type: id }))}
+                            aria-pressed={form.type === id}
+                            className={`flex items-center justify-center gap-2 rounded-2xl border-2 py-3 font-bold transition ${
+                              form.type === id
+                                ? 'border-[#C62F1D] bg-[#C62F1D] text-white'
+                                : 'border-neutral-200 hover:border-[#C62F1D]'
+                            }`}
+                          >
+                            <Icon size={18} />
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </fieldset>
+                  )}
 
                   <label className="mt-4 block font-bold">
                     Une remarque ? <span className="font-normal text-neutral-500">(facultatif)</span>
@@ -317,9 +356,9 @@ export default function CartDrawer() {
                   </label>
 
                   <div className="mt-5 rounded-2xl bg-[#C62F1D]/5 p-4 text-sm text-neutral-700">
-                    <p className="font-bold text-[#C62F1D]">Paiement à la caisse</p>
+                    <p className="font-bold text-[#C62F1D]">{isTableMode ? `Table ${table}` : 'Paiement à la caisse'}</p>
                     <p className="mt-1">
-                      Rien à payer en ligne : tu donnes ton numéro de commande et tu paies sur place.
+                      {isTableMode ? TABLE_PAYMENT_NOTE : 'Rien à payer en ligne : tu donnes ton numéro de commande et tu paies sur place.'}
                     </p>
                   </div>
 
@@ -354,12 +393,14 @@ export default function CartDrawer() {
                 <span className="grid h-20 w-20 place-items-center rounded-full bg-[#C62F1D] text-white">
                   <Check size={40} strokeWidth={3} />
                 </span>
-                <p className="text-lg text-neutral-600">Ta commande est envoyée. Ton numéro :</p>
+                <p className="text-lg text-neutral-600">
+                  {isTableMode ? `Ta commande arrive à la table ${table}` : 'Ta commande est envoyée. Ton numéro :'}
+                </p>
                 <p className="font-display text-7xl font-extrabold tracking-tighter text-[#C62F1D]">
                   {result.orderId}
                 </p>
                 <p className="max-w-xs text-neutral-700">
-                  Donne ce numéro à la caisse et <strong>paie sur place</strong> quand ta commande est prête.
+                  {isTableMode ? 'On t’apporte ta commande. Tu paies à la caisse en partant.' : 'Donne ce numéro à la caisse et paie sur place quand ta commande est prête.'}
                 </p>
                 {result.simulated && (
                   <p className="max-w-xs rounded-2xl bg-neutral-100 p-3 text-sm text-neutral-600">
@@ -367,20 +408,35 @@ export default function CartDrawer() {
                   </p>
                 )}
                 <div className="mt-2 flex w-full flex-col gap-3">
-                  <Link
-                    to="/suivi"
-                    onClick={closeCart}
-                    className="rounded-full bg-[#C62F1D] py-3.5 font-bold text-white transition hover:bg-neutral-900"
-                  >
-                    Suivre ma commande
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={closeCart}
-                    className="rounded-full border-2 border-neutral-200 py-3.5 font-bold transition hover:border-[#C62F1D]"
-                  >
-                    Retour au menu
-                  </button>
+                  {isTableMode ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        closeCart()
+                        navigate(`/table/${table}`)
+                      }}
+                      className="rounded-full bg-[#C62F1D] py-3.5 font-bold text-white transition hover:bg-neutral-900"
+                    >
+                      Retour au menu
+                    </button>
+                  ) : (
+                    <>
+                      <Link
+                        to="/suivi"
+                        onClick={closeCart}
+                        className="rounded-full bg-[#C62F1D] py-3.5 font-bold text-white transition hover:bg-neutral-900"
+                      >
+                        Suivre ma commande
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={closeCart}
+                        className="rounded-full border-2 border-neutral-200 py-3.5 font-bold transition hover:border-[#C62F1D]"
+                      >
+                        Retour au menu
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             )}

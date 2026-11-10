@@ -2,6 +2,19 @@
 const API_URL = import.meta.env.VITE_API_URL
 
 /**
+ * Récupère le menu depuis le Google Sheet (via Apps Script).
+ * Renvoie { products: [...] }.
+ */
+export async function fetchMenu() {
+  if (!API_URL) throw new Error('VITE_API_URL manquant')
+  const res = await fetch(`${API_URL}?action=menu`)
+  if (!res.ok) throw new Error('Impossible de charger le menu')
+  const data = await res.json()
+  if (data.error) throw new Error(data.error)
+  return data
+}
+
+/**
  * Envoie la commande.
  * - Sans VITE_API_URL : mode test, la commande est simulée (rien n'est enregistré).
  * - Avec VITE_API_URL : POST en text/plain (évite le preflight CORS d'Apps Script).

@@ -1,23 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { ArrowRight, Check, ShoppingBag, Flame, Utensils, CreditCard, Star, Plus, Store } from 'lucide-react'
+import { ArrowRight, Check, ShoppingBag, Flame, Utensils, CreditCard, Plus, Store } from 'lucide-react'
 import fond1 from '../assets/Fond1.png'
-import fond2 from '../assets/Fond3.png'
-import fritesImg from '../assets/Frites.png'
-import nuggetsImg from '../assets/Nuggets.png'
-import sauce1 from '../assets/Sauce1.png'
-import sauce2 from '../assets/Sauce2.png'
-import sauce3 from '../assets/Sauce3.png'
-import sauce4 from '../assets/Sauce4.png'
-import sauce5 from '../assets/Sauce5.png'
-import Ognions from '../assets/Ognions.png'
-import { CATEGORIES, OPTIONS, PRODUCTS } from '../data/menu'
+import fond2 from '../assets/Fond2.png'
+import { CATEGORIES } from '../data/menu'
+import { useMenu } from '../context/MenuContext'
 import { useCart } from '../context/CartContext'
 import { BurgerCard, ItemRow } from '../components/menu/MenuCards'
 import ProductSheet from '../components/menu/ProductSheet'
-
-const products = PRODUCTS.filter((p) => p.available !== false)
-const byCategory = (id) => products.filter((p) => p.category === id)
 
 const steps = [
   { n: '1', title: 'Choisis ton burger', text: 'Personnalise-le avec tes suppléments.', icon: Flame },
@@ -25,45 +15,16 @@ const steps = [
   { n: '3', title: 'Paye à la caisse', text: 'Aucun paiement en ligne, aucun compte.', icon: CreditCard },
 ]
 
-const sidesList = [
-  {
-    id: 'frites',
-    name: 'Frites Maison Dorées',
-    desc: 'Frites fraîches coupées sur place, croustillantes et fondantes.',
-    price: 250,
-    img: fritesImg,
-    tag: 'Fait maison',
-    rating: 4.7,
-  },
-  {
-    id: 'nuggets',
-    name: 'Nuggets (6 pièces)',
-    desc: 'Morceaux de poulet tendre enrobés d’une panure croustillante.',
-    price: 450,
-    img: nuggetsImg,
-    rating: 4.6,
-  },
-  {
-    id: 'onion-rings',
-    name: 'Onion Rings (8 pièces)',
-    desc: 'Ronds d’oignons doux frits à la perfection.',
-    price: 350,
-    img: Ognions,
-    rating: 4.8,
-  },
-]
-
-const saucesList = [
-  { id: 'sc1', name: 'Sauce Algérienne', price: 50, desc: 'Épicée et onctueuse', img: sauce4, tag: 'Populaire' },
-  { id: 'sc2', name: 'Sauce Cheddar Fondu', price: 80, desc: 'Fromage chaud fondant', img: sauce3, tag: 'Gourmand' },
-  { id: 'sc3', name: 'Sauce Blanche', price: 50, desc: 'Aillée et fraîche', img: sauce5 },
-  { id: 'sc4', name: 'Sauce Barbecue', price: 50, desc: 'Fumée et sucrée', img: sauce2 },
-  { id: 'sc5', name: 'Sauce Ketchup', price: 40, desc: 'Fraîche et savoureuse', img: sauce1 },
-]
-
 export default function Menu() {
   const reduce = useReducedMotion()
   const { addLines, openCart, count } = useCart()
+  const { products, options } = useMenu()
+
+  const byCategory = (id) => products.filter((p) => p.category === id)
+  const burgers = byCategory('burger')
+  const sides = byCategory('side')
+  const sauces = byCategory('sauce')
+  const drinks = byCategory('drink')
 
   const [active, setActive] = useState('burger')
   const [sheet, setSheet] = useState(null)
@@ -95,13 +56,15 @@ export default function Menu() {
     )
     sections.forEach((s) => observer.observe(s))
     return () => observer.disconnect()
-  }, [])
+  }, [products])
 
   const goTo = (id) =>
     document
       .getElementById(`cat-${id}`)
       ?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
 
+  // Burgers, produits avec choix obligatoire ou suppléments : on ouvre la fiche.
+  // Sinon, ajout direct au panier.
   const handleAdd = (product) => {
     if (product.category === 'burger' || product.variants || product.options?.length) {
       setSheet(product)
@@ -111,13 +74,6 @@ export default function Menu() {
       { productId: product.id, name: product.name, variant: '', options: [], basePrice: product.price, qty: 1 },
     ])
     setToast(`${product.name} ajouté`)
-  }
-
-  const handleCustomAdd = (item) => {
-    addLines([
-      { productId: item.id, name: item.name, variant: '', options: [], basePrice: item.price, qty: 1 },
-    ])
-    setToast(`${item.name} ajouté`)
   }
 
   const handleConfirm = (lines) => {
@@ -270,7 +226,7 @@ export default function Menu() {
               onScroll={(e) => handleScroll(e, setBurgerActiveIndex)}
               className="mt-6 flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 md:grid-cols-4 sm:overflow-visible sm:pb-0"
             >
-              {byCategory('burger').map((p, i) => (
+              {burgers.map((p, i) => (
                 <div key={p.id} className="w-[85vw] shrink-0 snap-center sm:w-full">
                   <BurgerCard product={p} index={i} onAdd={handleAdd} />
                 </div>
@@ -278,7 +234,7 @@ export default function Menu() {
             </div>
 
             <div className="flex justify-center gap-1.5 mt-4 sm:hidden">
-              {byCategory('burger').map((_, idx) => (
+              {burgers.map((_, idx) => (
                 <span
                   key={idx}
                   className={`h-1.5 rounded-full transition-all ${
@@ -291,11 +247,11 @@ export default function Menu() {
         </section>
 
         {/* ---------- IMAGE DE TRANSITION POUR MOBILE ONLY ---------- */}
-        <div className="relative z-20 mx-auto max-w-7xl px-5 pointer-events-none -mt-12 mb-2 flex justify-end sm:hidden">
+        <div className="relative z-5 mx-auto max-w-7xl px-5 pointer-events-none -mt-12 mb-2 flex justify-end sm:hidden">
           <img
             src={fond2}
             alt="Accompagnements d'ambiance"
-            className="h-24 w-auto object-contain drop-shadow-xl translate-x-3"
+            className="h-24 w-auto object-contain  translate-x-3"
           />
         </div>
 
@@ -318,7 +274,7 @@ export default function Menu() {
                 <img
                   src={fond2}
                   alt="Accompagnements d'ambiance"
-                  className="h-44 md:h-56 lg:h-64 w-auto object-contain drop-shadow-xl translate-x-6"
+                  className="h-44 md:h-56 lg:h-64 w-auto object-contain  translate-x-6"
                 />
               </div>
             </div>
@@ -328,7 +284,7 @@ export default function Menu() {
               onScroll={(e) => handleScroll(e, setSideActiveIndex)}
               className="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible sm:pb-0"
             >
-              {sidesList.map((item) => (
+              {sides.map((item) => (
                 <div
                   key={item.id}
                   className="w-[85vw] shrink-0 snap-center sm:w-full group relative mt-12 flex flex-col justify-between rounded-[2rem] bg-white p-6 pt-0 text-neutral-900 shadow-xl shadow-black/10 border border-neutral-100"
@@ -340,12 +296,14 @@ export default function Menu() {
                   )}
 
                   <div className="relative -mt-12 mx-auto flex h-36 items-center justify-center">
-                    <img
-                      src={item.img}
-                      alt={item.name}
-                      loading="lazy"
-                      className="h-32 w-auto object-contain drop-shadow-2xl transition-transform duration-500 group-hover:scale-105"
-                    />
+                    {item.img && (
+                      <img
+                        src={item.img}
+                        alt={item.name}
+                        loading="lazy"
+                        className="h-32 w-auto object-contain drop-shadow-2xl transition-transform duration-500 group-hover:scale-105"
+                      />
+                    )}
                   </div>
 
                   <div>
@@ -360,16 +318,11 @@ export default function Menu() {
                     <p className="mt-2 text-xs text-neutral-600 leading-relaxed">{item.desc}</p>
                   </div>
 
-                  <div className="mt-6 pt-4 border-t border-neutral-100 flex items-center justify-between">
-                    <div className="flex items-center gap-1 text-xs font-bold text-amber-500">
-                      <Star size={14} fill="currentColor" />
-                      <span>{item.rating}</span>
-                    </div>
-
+                  <div className="mt-6 pt-4 border-t border-neutral-100">
                     <button
                       type="button"
-                      onClick={() => handleCustomAdd(item)}
-                      className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 font-display text-xs font-bold text-white bg-[#C62F1D] transition-all hover:bg-black"
+                      onClick={() => handleAdd(item)}
+                      className="inline-flex w-full items-center justify-center gap-1.5 rounded-full px-5 py-2.5 font-display text-xs font-bold text-white bg-[#C62F1D] transition-all hover:bg-black"
                     >
                       <Plus size={14} />
                       <span>Commander</span>
@@ -380,7 +333,7 @@ export default function Menu() {
             </div>
 
             <div className="flex justify-center gap-1.5 mt-4 sm:hidden">
-              {sidesList.map((_, idx) => (
+              {sides.map((_, idx) => (
                 <span
                   key={idx}
                   className={`h-1.5 rounded-full transition-all ${
@@ -408,7 +361,7 @@ export default function Menu() {
               onScroll={(e) => handleScroll(e, setSauceActiveIndex)}
               className="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 sm:overflow-visible sm:pb-0"
             >
-              {saucesList.map((sauce) => (
+              {sauces.map((sauce) => (
                 <div
                   key={sauce.id}
                   className="w-[85vw] shrink-0 snap-center sm:w-full group relative mt-12 flex flex-col justify-between rounded-[2rem] bg-white p-6 pt-0 text-neutral-900 shadow-xl shadow-black/10 border border-neutral-100"
@@ -420,12 +373,14 @@ export default function Menu() {
                   )}
 
                   <div className="relative -mt-12 mx-auto flex h-36 items-center justify-center">
-                    <img
-                      src={sauce.img}
-                      alt={sauce.name}
-                      loading="lazy"
-                      className="h-32 w-auto object-contain drop-shadow-2xl transition-transform duration-500 group-hover:scale-105"
-                    />
+                    {sauce.img && (
+                      <img
+                        src={sauce.img}
+                        alt={sauce.name}
+                        loading="lazy"
+                        className="h-32 w-auto object-contain drop-shadow-2xl transition-transform duration-500 group-hover:scale-105"
+                      />
+                    )}
                   </div>
 
                   <div>
@@ -440,16 +395,11 @@ export default function Menu() {
                     <p className="mt-2 text-xs text-neutral-600 leading-relaxed">{sauce.desc}</p>
                   </div>
 
-                  <div className="mt-6 pt-4 border-t border-neutral-100 flex items-center justify-between">
-                    <div className="flex items-center gap-1 text-xs font-bold text-amber-500">
-                      <Star size={14} fill="currentColor" />
-                      <span>4.9</span>
-                    </div>
-
+                  <div className="mt-6 pt-4 border-t border-neutral-100">
                     <button
                       type="button"
-                      onClick={() => handleCustomAdd(sauce)}
-                      className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 font-display text-xs font-bold text-white bg-[#C62F1D] transition-all hover:bg-black"
+                      onClick={() => handleAdd(sauce)}
+                      className="inline-flex w-full items-center justify-center gap-1.5 rounded-full px-5 py-2.5 font-display text-xs font-bold text-white bg-[#C62F1D] transition-all hover:bg-black"
                     >
                       <Plus size={14} />
                       <span>Ajouter</span>
@@ -460,7 +410,7 @@ export default function Menu() {
             </div>
 
             <div className="flex justify-center gap-1.5 mt-4 sm:hidden">
-              {saucesList.map((_, idx) => (
+              {sauces.map((_, idx) => (
                 <span
                   key={idx}
                   className={`h-1.5 rounded-full transition-all ${
@@ -480,7 +430,7 @@ export default function Menu() {
               onScroll={(e) => handleScroll(e, setDrinkActiveIndex)}
               className="mt-6 flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible sm:pb-0"
             >
-              {byCategory('drink').map((p, i) => (
+              {drinks.map((p, i) => (
                 <li key={p.id} className="w-[85vw] shrink-0 snap-center sm:w-full">
                   <ItemRow product={p} index={i} onAdd={handleAdd} />
                 </li>
@@ -488,7 +438,7 @@ export default function Menu() {
             </ul>
 
             <div className="flex justify-center gap-1.5 mt-4 sm:hidden">
-              {byCategory('drink').map((_, idx) => (
+              {drinks.map((_, idx) => (
                 <span
                   key={idx}
                   className={`h-1.5 rounded-full transition-all ${
@@ -548,7 +498,7 @@ export default function Menu() {
             key={sheet.id}
             product={sheet}
             products={products}
-            optionsMap={OPTIONS}
+            optionsMap={options}
             onClose={() => setSheet(null)}
             onConfirm={handleConfirm}
           />

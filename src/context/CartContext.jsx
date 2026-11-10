@@ -18,6 +18,7 @@ function loadCart() {
 export function CartProvider({ children }) {
   const [items, setItems] = useState(loadCart)
   const [open, setOpen] = useState(false)
+  const [table, setTable] = useState(null)
 
   // Le panier survit à un rafraîchissement de la page
   useEffect(() => {
@@ -75,8 +76,8 @@ export function CartProvider({ children }) {
   const value = useMemo(() => {
     const count = items.reduce((s, i) => s + i.qty, 0)
     const total = items.reduce((s, i) => s + i.qty * i.unitPrice, 0)
-    return { items, count, total, open, addLines, setQty, removeLine, clear, openCart, closeCart }
-  }, [items, open, addLines, setQty, removeLine, clear, openCart, closeCart])
+    return { items, count, total, open, table, setTable, addLines, setQty, removeLine, clear, openCart, closeCart }
+  }, [items, open, table, addLines, setQty, removeLine, clear, openCart, closeCart])
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>
 }
