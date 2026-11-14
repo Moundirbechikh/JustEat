@@ -20,6 +20,13 @@ export default function Footer() {
             </nav>
 
             <Link
+              to="/admin"
+              className="font-display text-[10px] uppercase tracking-[0.22em] text-white/75 transition-all hover:text-white hover:tracking-[0.28em]"
+            >
+              Just Admin
+            </Link>
+
+            <Link
               to="/menu"
               className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 font-display text-sm font-bold text-[#C62F1D] shadow-md transition-all hover:bg-neutral-900 hover:text-white"
             >
