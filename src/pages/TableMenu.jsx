@@ -199,7 +199,7 @@ export default function TableMenu() {
                 Notre carte & tarifs
               </h1>
               <div className="mt-4 inline-block">
-                <span className="rounded-full bg-[#C62F1D] px-3.5 py-1.5 font-display text-md font-bold uppercase tracking-wider text-white shadow-sm sm:text-lg">
+                <span className="rounded-full bg-[#C62F1D] px-3.5 py-1.5 font-display text-md font-bold uppercase tracking-wid text-white shadow-sm sm:text-lg">
                   Table {cleanTableId}
                 </span>
               </div>

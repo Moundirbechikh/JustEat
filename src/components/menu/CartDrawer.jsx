@@ -104,8 +104,9 @@ export default function CartDrawer() {
       setResult(res)
       setStep('done')
       clear()
-    } catch {
-      setApiError('Impossible d’envoyer la commande. Vérifie ta connexion et réessaie.')
+    } catch (error) {
+      const message = error?.message || 'Impossible d’envoyer la commande. Vérifie ta connexion et réessaie.'
+      setApiError(message)
     } finally {
       setSending(false)
     }

@@ -12,6 +12,38 @@ const EXTRA_GROUPS = [
   { category: 'drink', title: 'Boissons', hint: 'Bien fraîche avec un burger chaud.' },
 ]
 
+function normalizeVariantText(value) {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+}
+
+function resolveVariantValue(product, candidate) {
+  const items = Array.isArray(product?.variants?.items)
+    ? product.variants.items
+    : (typeof product?.variants === 'string'
+        ? String(product.variants).split('|').map((v) => v.trim()).filter(Boolean)
+        : [])
+
+  if (!items.length) return ''
+
+  const raw = String(candidate ?? '').trim()
+  const exact = items.find((item) => String(item).trim() === raw)
+
+  // Important : on garde la variante exacte du choix, jamais le nom du produit.
+  // Ex. : Coca-Cola / Fanta / Sprite / Hamoud Boualem
+  if (exact) return exact
+  if (raw && items.some((item) => normalizeVariantText(item) === normalizeVariantText(raw))) {
+    return items.find((item) => normalizeVariantText(item) === normalizeVariantText(raw))
+  }
+
+  return items[0] || ''
+}
+
 function Stepper({ value, onChange, min = 0, max = 20, label }) {
   return (
     <div className="inline-flex items-center gap-1 rounded-full border-2 border-neutral-200 p-1">
@@ -41,20 +73,25 @@ function Stepper({ value, onChange, min = 0, max = 20, label }) {
 }
 
 function VariantChips({ variants, value, onChange }) {
+  const isDrinkChoice = variants?.label?.toLowerCase().includes('boisson') || variants?.items?.length <= 6
+
   return (
-    <div className="mt-3">
-      <p className="mb-2 text-sm font-semibold text-neutral-600">{variants.label}</p>
-      <div className="flex flex-wrap gap-2">
+    <div className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
+      <p className="mb-3 text-sm font-bold uppercase tracking-[0.12em] text-neutral-500">
+        {variants.label || 'Choix'}
+      </p>
+
+      <div className={`flex flex-wrap gap-2 ${isDrinkChoice ? 'gap-2.5' : ''}`}>
         {variants.items.map((v) => (
           <button
             key={v}
             type="button"
             onClick={() => onChange(v)}
             aria-pressed={value === v}
-            className={`rounded-full border-2 px-4 py-1.5 text-sm font-bold transition ${
+            className={`rounded-full border-2 px-4 py-2 text-sm font-bold transition ${
               value === v
-                ? 'border-[#C62F1D] bg-[#C62F1D] text-white'
-                : 'border-neutral-200 text-neutral-900 hover:border-[#C62F1D]'
+                ? 'border-[#C62F1D] bg-[#C62F1D] text-white shadow-sm shadow-[#C62F1D]/20'
+                : 'border-neutral-200 bg-white text-neutral-900 hover:border-[#C62F1D]'
             }`}
           >
             {v}
@@ -69,11 +106,18 @@ export default function ProductSheet({ product, products, optionsMap, onClose, o
   useBodyLock(true)
 
   const isBurger = product.category === 'burger'
+  const isDrink = product.category === 'drink'
   const [qty, setQty] = useState(1)
   const [picked, setPicked] = useState([])
-  const [variant, setVariant] = useState(product.variants?.items?.[0] || '')
+  const allowedVariants = product?.variants?.items || []
+  const [variant, setVariant] = useState(allowedVariants[0] || '')
   // extras = { [idProduit]: { qty, variant } }
   const [extras, setExtras] = useState({})
+
+  useEffect(() => {
+    if (!allowedVariants.length) return
+    setVariant((current) => (allowedVariants.includes(current) ? current : allowedVariants[0]))
+  }, [allowedVariants])
 
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose()
@@ -119,11 +163,13 @@ export default function ProductSheet({ product, products, optionsMap, onClose, o
     setExtras((prev) => (prev[p.id] ? { ...prev, [p.id]: { ...prev[p.id], variant: v } } : prev))
 
   const confirm = () => {
+    const resolvedVariant = product.variants ? resolveVariantValue(product, variant) : ''
+
     const lines = [
       {
         productId: product.id,
         name: product.name,
-        variant: product.variants ? variant : '',
+        variant: resolvedVariant,
         options: chosenOptions,
         basePrice: product.price,
         qty,
@@ -132,10 +178,11 @@ export default function ProductSheet({ product, products, optionsMap, onClose, o
     for (const p of products) {
       const e = extras[p.id]
       if (e?.qty) {
+        const resolvedExtraVariant = p.variants ? resolveVariantValue(p, e.variant) : ''
         lines.push({
           productId: p.id,
           name: p.name,
-          variant: p.variants ? e.variant : '',
+          variant: resolvedExtraVariant,
           options: [],
           basePrice: p.price,
           qty: e.qty,
@@ -190,9 +237,10 @@ export default function ProductSheet({ product, products, optionsMap, onClose, o
 
         {/* Contenu défilant */}
         <div className="flex-1 overflow-y-auto overscroll-contain p-5">
-          {/* Choix obligatoire du produit principal (boisson, sauce...) */}
           {product.variants && (
-            <VariantChips variants={product.variants} value={variant} onChange={setVariant} />
+            <div className={isDrink ? 'mb-4' : ''}>
+              <VariantChips variants={product.variants} value={variant} onChange={setVariant} />
+            </div>
           )}
 
           {/* Suppléments du burger */}
@@ -217,17 +265,15 @@ export default function ProductSheet({ product, products, optionsMap, onClose, o
                       >
                         <span className="flex items-center gap-3 font-semibold">
                           <span
-                            className={`grid h-6 w-6 place-items-center rounded-md border-2 transition ${
-                              on ? 'border-[#C62F1D] bg-[#C62F1D] text-white' : 'border-neutral-300'
+                            className={`grid h-5 w-5 place-items-center rounded-full border-2 ${
+                              on ? 'border-[#C62F1D] bg-[#C62F1D]' : 'border-neutral-300 bg-white'
                             }`}
                           >
-                            {on && <Check size={16} strokeWidth={3} />}
+                            {on && <Check size={12} className="text-white" />}
                           </span>
                           {o.name}
                         </span>
-                        <span className="text-sm font-bold text-neutral-600">
-                          {o.price > 0 ? `+ ${formatPrice(o.price)}` : 'Gratuit'}
-                        </span>
+                        <span className="font-bold text-[#C62F1D]">{formatPrice(o.price)}</span>
                       </button>
                     </li>
                   )
@@ -236,85 +282,90 @@ export default function ProductSheet({ product, products, optionsMap, onClose, o
             </section>
           )}
 
-          {/* Recommandations : accompagnements, sauces, boissons */}
-          {groups.length > 0 && (
-            <section className={options.length ? 'mt-8' : ''}>
-              <div className="flex items-center gap-2">
-                <h3 className="font-display text-xl font-extrabold tracking-tighter">
-                  Complète ton repas
-                </h3>
-              </div>
-
-              {groups.map((g) => (
-                <div key={g.category} className="mt-5">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <h4 className="font-bold">{g.title}</h4>
-                    <p className="text-sm text-neutral-500">{g.hint}</p>
+          {isBurger && groups.length > 0 && (
+            <div className="mt-5 space-y-4">
+              {groups.map((group) => (
+                <div key={group.category} className="space-y-3 rounded-2xl bg-neutral-50 p-3">
+                  <div>
+                    <p className="text-sm font-bold uppercase tracking-[0.12em] text-neutral-500">{group.title}</p>
+                    <p className="text-xs text-neutral-500">{group.hint}</p>
                   </div>
 
-                  <ul className="mt-2 grid gap-2">
-                    {g.items.map((p) => {
-                      const e = extras[p.id]
+                  <div className="space-y-2">
+                    {group.items.map((p) => {
+                      const extra = extras[p.id]
+                      const chosenVariant = p.variants?.items?.[0] || ''
+                      const variantValue = extra?.variant || chosenVariant
+
                       return (
-                        <li
-                          key={p.id}
-                          className={`rounded-2xl border-2 p-3 transition ${
-                            e ? 'border-[#C62F1D] bg-[#C62F1D]/5' : 'border-neutral-200'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="min-w-0 flex-1">
-                              <p className="flex flex-wrap items-center gap-2 font-semibold leading-tight">
-                                {p.name}
-                                {p.recommend && (
-                                  <span className="rounded-full bg-[#F4A507] px-2 py-0.5 text-[0.7rem] font-bold text-neutral-900">
-                                    Conseillé
-                                  </span>
-                                )}
-                              </p>
-                              <p className="text-sm font-bold text-[#C62F1D]">{formatPrice(p.price)}</p>
+                        <div key={p.id} className="rounded-2xl border border-neutral-200 bg-white p-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="font-bold text-neutral-900">{p.name}</p>
+                              <p className="text-xs text-neutral-500">{formatPrice(p.price)}</p>
                             </div>
                             <Stepper
-                              value={e?.qty || 0}
-                              onChange={(q) => setExtraQty(p, q)}
+                              value={extra?.qty || 0}
+                              onChange={(next) => setExtraQty(p, next)}
                               label={p.name}
                             />
                           </div>
 
-                          {e && p.variants && (
-                            <VariantChips
-                              variants={p.variants}
-                              value={e.variant}
-                              onChange={(v) => setExtraVariant(p, v)}
-                            />
+                          {p.variants && (
+                            <div className="mt-3">
+                              <p className="mb-2 text-xs font-bold uppercase tracking-[0.1em] text-neutral-500">
+                                {p.variants.label}
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {p.variants.items.map((v) => (
+                                  <button
+                                    key={`${p.id}-${v}`}
+                                    type="button"
+                                    onClick={() => setExtraVariant(p, v)}
+                                    className={`rounded-full border px-3 py-1.5 text-xs font-bold ${
+                                      variantValue === v ? 'border-[#C62F1D] bg-[#C62F1D] text-white' : 'border-neutral-200 bg-neutral-50 text-neutral-700'
+                                    }`}
+                                  >
+                                    {v}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
                           )}
-                        </li>
+                        </div>
                       )
                     })}
-                  </ul>
+                  </div>
                 </div>
               ))}
-            </section>
+            </div>
           )}
         </div>
 
-        {/* Pied : quantité + validation */}
-        <div className="flex items-center gap-3 border-t border-neutral-200 bg-white p-4">
-          <Stepper value={qty} onChange={setQty} min={1} label={product.name} />
+        {/* Pied / CTA */}
+        <div className="border-t border-neutral-200 bg-white p-5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.12em] text-neutral-500">Quantité</p>
+              <p className="mt-1 font-display text-3xl font-extrabold tracking-tighter text-neutral-900">
+                {qty}
+              </p>
+            </div>
+            <Stepper value={qty} onChange={setQty} label={product.name} />
+          </div>
+
+          <div className="mb-4 flex items-center justify-between text-sm text-neutral-700">
+            <span>{extrasCount ? `${extrasCount} ajout${extrasCount > 1 ? 's' : ''}` : 'Aucun ajout'}</span>
+            <span className="text-lg font-extrabold text-[#C62F1D]">{formatPrice(total)}</span>
+          </div>
+
           <button
             type="button"
             onClick={confirm}
-            className="flex flex-1 items-center justify-between gap-3 rounded-full bg-[#C62F1D] px-6 py-3.5 font-bold text-white transition hover:bg-neutral-900"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#C62F1D] px-5 py-3.5 text-base font-bold text-white transition hover:bg-neutral-900"
           >
-            <span>
-              Ajouter au panier
-              {extrasCount > 0 && (
-                <span className="ml-2 text-sm font-semibold text-white/80">
-                  + {extrasCount} complément{extrasCount > 1 ? 's' : ''}
-                </span>
-              )}
-            </span>
-            <span className="whitespace-nowrap">{formatPrice(total)}</span>
+            <Sparkles size={18} />
+            Ajouter au panier
           </button>
         </div>
       </motion.div>
