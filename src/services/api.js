@@ -69,9 +69,17 @@ function saveRecentOrders(next) {
 
 export async function trackOrder(orderId) {
   const normalized = String(orderId ?? "").trim();
-  if (!normalized) return null;
+  if (!normalized) {
+    console.warn("[trackOrder] orderId vide");
+    return null;
+  }
 
-  if (!API_URL) return null;
+  if (!API_URL) {
+    console.warn("[trackOrder] VITE_API_URL manquant");
+    return null;
+  }
+
+  console.log("[trackOrder] start", { orderId: normalized, apiUrl: API_URL });
 
   try {
     const res = await fetch(API_URL, {
@@ -83,23 +91,45 @@ export async function trackOrder(orderId) {
     const text = await res.text();
     const data = safeJsonParse(text);
 
-    if (!res.ok || data?.ok === false) return null;
-    if (!data || data.ok === undefined) return null;
+    console.log("[trackOrder] response", {
+      status: res.status,
+      ok: res.ok,
+      raw: text,
+      parsed: data,
+    });
 
-    return data.order ?? data;
-  } catch {
+    if (!res.ok || data?.ok === false) {
+      console.warn("[trackOrder] request failed", { status: res.status, data });
+      return null;
+    }
+    if (!data || data.ok === undefined) {
+      console.warn("[trackOrder] invalid payload", data);
+      return null;
+    }
+
+    const order = data.order ?? data;
+    console.log("[trackOrder] order received", order);
+    return order;
+  } catch (error) {
+    console.error("[trackOrder] exception", error);
     return null;
   }
 }
 
 export async function getOrderById(orderId) {
+  console.log("[getOrderById] call", { orderId });
   const data = await trackOrder(orderId);
-  if (!data) return null;
+  if (!data) {
+    console.warn("[getOrderById] no data returned", { orderId });
+    return null;
+  }
 
   if (data.orderId || data.status) {
+    console.log("[getOrderById] parsed order", data);
     return data;
   }
 
+  console.log("[getOrderById] fallback order", data);
   return data;
 }
 

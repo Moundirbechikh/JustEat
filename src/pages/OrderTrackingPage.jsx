@@ -360,20 +360,29 @@ export default function OrderTrackingPage() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (!lastOrder?.orderId) return
+    if (!lastOrder?.orderId) {
+      console.log("[OrderTrackingPage] no lastOrder found");
+      return;
+    }
 
     const refreshOrder = async () => {
       try {
         setLoading(true)
+        console.log("[OrderTrackingPage] refreshing order", { orderId: lastOrder.orderId });
         const fresh = await getOrderById(lastOrder.orderId)
+        console.log("[OrderTrackingPage] refresh result", { fresh, orderId: lastOrder.orderId });
+
         if (fresh) {
           setOrders((current) => {
             const merged = [fresh, ...current.filter((order) => order.orderId !== fresh.orderId)]
+            console.log("[OrderTrackingPage] merged orders", merged);
             return merged
           })
+        } else {
+          console.warn("[OrderTrackingPage] no fresh order returned for this ID");
         }
-      } catch {
-        // ignorer
+      } catch (error) {
+        console.error("[OrderTrackingPage] refresh failed", error)
       } finally {
         setLoading(false)
       }
@@ -383,6 +392,11 @@ export default function OrderTrackingPage() {
     const interval = window.setInterval(refreshOrder, 5000)
     return () => window.clearInterval(interval)
   }, [lastOrder?.orderId])
+
+  useEffect(() => {
+    console.log("[OrderTrackingPage] current orders state", orders)
+    console.log("[OrderTrackingPage] activeOrder", filtered.find((order) => order.orderId === selectedId) ?? filtered[0] ?? null)
+  }, [orders, selectedId, filtered])
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
