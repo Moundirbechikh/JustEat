@@ -32,14 +32,12 @@ import logo from '../assets/Logo1.png'
 
 /* ---------- Données et helpers ---------- */
 
-// Normalise un statut pour comparer sans se soucier de la casse ni des espaces
 const norm = (value) => String(value ?? '').normalize('NFC').trim().toLowerCase()
 
 const STOPPED = ['refusée', 'annulée']
-const FINAL = ['servie', ...STOPPED] // plus de mise à jour automatique à partir de là
-const POLL_MS = 12000 // rafraîchissement du statut
+const FINAL = ['servie', ...STOPPED]
+const POLL_MS = 12000
 
-// Étapes selon le type de commande
 function getSteps(isTable) {
   return isTable
     ? [
@@ -56,7 +54,6 @@ function getSteps(isTable) {
       ]
 }
 
-// Phrase affichée dans le grand bloc selon le statut
 function getStatusInfo(status, isTable) {
   switch (status) {
     case 'à confirmer':
@@ -79,7 +76,6 @@ function getStatusInfo(status, isTable) {
   }
 }
 
-// Couleurs des pastilles de statut (mêmes teintes que dans le Sheet)
 const PILL = {
   'à confirmer': 'bg-amber-100 text-amber-800',
   'en préparation': 'bg-blue-100 text-blue-800',
@@ -103,7 +99,6 @@ function formatWhen(value) {
   return `${day} à ${time}`
 }
 
-// Les articles peuvent être un texte (« 1× Burger · 1× Frites ») ou un tableau d'objets
 function getItemLines(items) {
   if (!items) return []
   if (typeof items === 'string') {
@@ -125,8 +120,6 @@ function getItemLines(items) {
   return []
 }
 
-/* ---------- Petits composants ---------- */
-
 function Card({ title, children, className = '' }) {
   return (
     <section
@@ -146,8 +139,6 @@ function Chip({ icon: Icon, children }) {
     </span>
   )
 }
-
-/* ---------- Vue d'une commande ---------- */
 
 function OrderView({ order, reduce, menuTo }) {
   const status = norm(order.status)
@@ -179,7 +170,6 @@ function OrderView({ order, reduce, menuTo }) {
 
   return (
     <>
-      {/* ----- Grand bloc ----- */}
       <motion.section
         initial={reduce ? false : { opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -226,7 +216,6 @@ function OrderView({ order, reduce, menuTo }) {
         </div>
       </motion.section>
 
-      {/* ----- Avancement ou message d'arrêt ----- */}
       {stopped ? (
         <section className="mt-6 flex items-start gap-4 rounded-[2rem] border-2 border-black/10 bg-white p-6 shadow-xl shadow-black/5 sm:p-7">
           <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#C62F1D]/10 text-[#C62F1D]">
@@ -260,7 +249,6 @@ function OrderView({ order, reduce, menuTo }) {
                   aria-current={current ? 'step' : undefined}
                   className="relative flex gap-4 pb-8 last:pb-0 md:flex-1 md:flex-col md:items-center md:gap-3 md:pb-0 md:text-center"
                 >
-                  {/* Trait vers l'étape suivante */}
                   {index < steps.length - 1 && (
                     <span
                       aria-hidden="true"
@@ -270,7 +258,6 @@ function OrderView({ order, reduce, menuTo }) {
                     />
                   )}
 
-                  {/* Pastille */}
                   <span className="relative z-10 grid h-10 w-10 shrink-0 place-items-center">
                     {current && (
                       <span className="absolute inset-0 rounded-full bg-[#C62F1D]/30 motion-safe:animate-ping" />
@@ -286,7 +273,6 @@ function OrderView({ order, reduce, menuTo }) {
                     </span>
                   </span>
 
-                  {/* Texte */}
                   <div className="min-w-0 pt-1.5 md:px-2 md:pt-0">
                     <p
                       className={`font-display text-base font-extrabold tracking-tight ${
@@ -304,7 +290,6 @@ function OrderView({ order, reduce, menuTo }) {
         </Card>
       )}
 
-      {/* ----- Résumé et détail ----- */}
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <Card title="Résumé" className={hasDetail ? '' : 'lg:col-span-2'}>
           <ul className="mt-4 space-y-3">
@@ -356,23 +341,18 @@ function OrderView({ order, reduce, menuTo }) {
   )
 }
 
-/* ---------- Écran de suivi (site ou espace table) ---------- */
-
 function TrackingScreen({ tableId }) {
   const reduce = useReducedMotion()
   const { setTable } = useCart()
   const isTableMode = Boolean(tableId)
   const menuTo = isTableMode ? `/table/${tableId}` : '/menu'
 
-  // En espace table, le panier doit savoir de quelle table on parle
   useEffect(() => {
     if (!isTableMode) return undefined
     setTable(tableId)
     return () => setTable(null)
   }, [isTableMode, tableId, setTable])
 
-  // Espace table : UNE seule commande (celle de cet appareil pour cette table).
-  // Site : les commandes en ligne de cet appareil.
   const [orders, setOrders] = useState(() => {
     if (isTableMode) {
       const mine = getTableOrder(tableId)
@@ -403,8 +383,6 @@ function TrackingScreen({ tableId }) {
   const activeToken = activeOrder?.editToken
   const activeFinal = FINAL.includes(norm(activeOrder?.status))
 
-  // Mise à jour automatique du statut : toutes les 12 s, en pause quand l'onglet est caché,
-  // et arrêtée dès que la commande est servie, refusée ou annulée
   useEffect(() => {
     if (!activeId || !activeToken || activeFinal) return undefined
     let cancelled = false
@@ -446,49 +424,74 @@ function TrackingScreen({ tableId }) {
   }
 
   return (
-    <main className="flex min-h-dvh flex-col bg-white text-neutral-900">
-      {/* ----- Barre du haut (espace table uniquement : pas de Navbar) ----- */}
-      {isTableMode && (
-        <header className="border-b-2 border-black/10 bg-white">
-          <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-5 py-4 lg:px-10">
-            <span className="inline-flex items-center rounded-full bg-[#C62F1D] px-4 py-2 shadow-sm">
-              <img
-                src={logo}
-                alt="Just Burgers"
-                className="h-8 w-auto object-contain brightness-0 invert"
-              />
-            </span>
+    <main className="relative flex min-h-dvh flex-col overflow-x-hidden bg-white text-neutral-900">
+      {/* ----- En-tête Hero plein écran harmonisé avec les autres composants admin/client ----- */}
+      <header className="relative w-full overflow-hidden px-5 pb-6 pt-20 sm:px-6 sm:pb-8 md:pt-28 lg:px-12">
+        {/* MOBILE ONLY : Courbe SVG rouge inversée en haut à GAUCHE */}
+        <div className="pointer-events-none absolute left-0 top-0 z-0 h-32 w-40 sm:hidden">
+          <svg viewBox="0 0 200 200" className="h-full w-full fill-[#C62F1D]" preserveAspectRatio="none">
+            <path d="M 0,0 L 0,180 C 80,180 140,120 160,0 Z" />
+          </svg>
+        </div>
 
-            <div className="flex items-center gap-2">
-              <span className="rounded-full bg-[#C62F1D] px-3.5 py-1.5 font-display text-sm font-bold uppercase tracking-wide text-white">
+        {/* MOBILE ONLY : Logo blanc dans la courbe gauche */}
+        <div className="pointer-events-none absolute left-2 top-2 z-10 flex items-center justify-center p-1 sm:hidden">
+          <img
+            src={logo}
+            alt="Just Burgers"
+            className="h-12 w-auto object-contain brightness-0 invert drop-shadow-md"
+          />
+        </div>
+
+        {/* DESKTOP / TABLET ONLY : Courbe SVG rouge en haut à DROITE */}
+        <div className="pointer-events-none absolute right-0 top-0 z-0 hidden h-64 w-72 sm:block md:h-72 md:w-[38%]">
+          <svg viewBox="0 0 200 200" className="h-full w-full fill-[#C62F1D]" preserveAspectRatio="none">
+            <path d="M 200,0 L 200,180 C 120,180 60,120 40,0 Z" />
+          </svg>
+        </div>
+
+        {/* DESKTOP / TABLET ONLY : Logo blanc dans l'aplat rouge droit */}
+        <div className="pointer-events-none absolute right-8 top-12 z-10 hidden items-center justify-center p-2 sm:flex">
+          <img
+            src={logo}
+            alt="Just Burgers"
+            className="h-20 w-auto object-contain brightness-0 invert drop-shadow-md md:h-28"
+          />
+        </div>
+
+        <div className="relative z-20 mx-auto flex w-full max-w-5xl flex-col gap-4">
+          {/* Ligne supérieure : Table + Bouton Menu bien positionnés et bien lisibles */}
+          <div className="flex items-center justify-end gap-2.5 sm:justify-start sm:pr-48">
+            {isTableMode && (
+              <span className="rounded-full bg-[#C62F1D] px-4 py-2 font-display text-xs font-extrabold uppercase tracking-wide text-white shadow-md sm:text-sm">
                 Table {tableId}
               </span>
-              <Link
-                to={menuTo}
-                className="inline-flex items-center gap-2 rounded-full border-2 border-black/10 bg-white px-4 py-1.5 text-sm font-bold text-neutral-700 transition hover:border-[#C62F1D] hover:text-[#C62F1D]"
-              >
-                <ArrowLeft size={16} />
-                Menu
-              </Link>
-            </div>
+            )}
+            <Link
+              to={menuTo}
+              className="inline-flex items-center gap-2 rounded-full border-2 border-black/10 bg-white px-5 py-2 font-display text-xs font-bold text-neutral-800 shadow-sm transition hover:border-[#C62F1D] hover:text-[#C62F1D] sm:text-sm"
+            >
+              <ArrowLeft size={16} strokeWidth={2.5} />
+              <span>Menu</span>
+            </Link>
           </div>
-        </header>
-      )}
 
-      <div className={`flex-1 px-5 pb-20 lg:px-10 ${isTableMode ? 'pt-8 md:pt-10' : 'pt-28 md:pt-32'}`}>
+          {/* Titre et sous-titre de la page */}
+          <div className="pt-2 sm:pr-48 sm:pt-0">
+            <p className="font-display text-xs font-extrabold uppercase tracking-[0.2em] text-[#C62F1D]">
+              Suivi de commande
+            </p>
+            <h1 className="mt-1 font-display text-4xl font-extrabold tracking-tighter text-neutral-900 sm:text-6xl md:text-7xl">
+              Ma commande
+            </h1>
+          </div>
+        </div>
+      </header>
+
+      <div className="relative z-10 flex-1 px-5 pb-20 lg:px-10">
         <div className="mx-auto max-w-5xl">
-          {/* ----- En-tête ----- */}
-          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div>
-              <p className="font-display text-xs font-bold uppercase tracking-[0.2em] text-[#C62F1D]">
-                Suivi de commande
-              </p>
-              <h1 className="mt-1 font-display text-5xl font-extrabold tracking-tighter sm:text-6xl md:text-7xl">
-                Ma commande
-              </h1>
-            </div>
-
-            {!isTableMode && orders.length > 1 && (
+          {!isTableMode && orders.length > 1 && (
+            <div className="mb-6 flex justify-end">
               <label className="flex h-12 w-full items-center gap-2 rounded-full border-2 border-neutral-200 bg-white px-4 text-sm transition focus-within:border-[#C62F1D] md:max-w-sm">
                 <Search size={18} className="shrink-0 text-neutral-400" />
                 <input
@@ -510,8 +513,8 @@ function TrackingScreen({ tableId }) {
                   </button>
                 )}
               </label>
-            )}
-          </div>
+            </div>
+          )}
 
           {syncing && orders.length > 0 && (
             <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#C62F1D]/10 px-3 py-1.5 text-sm font-semibold text-[#C62F1D]">
@@ -578,7 +581,6 @@ function TrackingScreen({ tableId }) {
             <>
               <OrderView key={activeOrder.orderId} order={activeOrder} reduce={reduce} menuTo={menuTo} />
 
-              {/* Historique : site uniquement. Jamais en espace table. */}
               {!isTableMode && orders.length > 1 && (
                 <Card title="Mes commandes" className="mt-6">
                   <ul className="mt-4 grid max-h-80 gap-2 overflow-y-auto sm:grid-cols-2">
@@ -617,7 +619,7 @@ function TrackingScreen({ tableId }) {
         </div>
       </div>
 
-      {/* ---------- BESOIN D'AIDE (même design que « Prêt à commander » du menu) ---------- */}
+      {/* ---------- BESOIN D'AIDE ---------- */}
       {activeOrder && (
         <section className="relative rounded-t-[2.5rem] bg-[#C62F1D] px-5 py-12 text-white md:py-16 lg:px-10">
           <div className="mx-auto max-w-7xl">
@@ -668,8 +670,6 @@ function TrackingScreen({ tableId }) {
     </main>
   )
 }
-
-/* ---------- Page : /suivi (site) ou /table/:tableId/suivi (espace table) ---------- */
 
 export default function OrderTrackingPage() {
   const { tableId } = useParams()
