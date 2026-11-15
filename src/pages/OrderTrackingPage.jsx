@@ -361,6 +361,7 @@ export default function OrderTrackingPage() {
 
   useEffect(() => {
     if (!lastOrder?.orderId) return
+
     const refreshOrder = async () => {
       try {
         setLoading(true)
@@ -380,30 +381,6 @@ export default function OrderTrackingPage() {
 
     refreshOrder()
     const interval = window.setInterval(refreshOrder, 5000)
-    return () => window.clearInterval(interval)
-  }, [lastOrder?.orderId])
-
-  useEffect(() => {
-    const syncRecent = async () => {
-      if (!lastOrder?.orderId) return
-      try {
-        const recent = await getTrackingOrders()
-        if (Array.isArray(recent) && recent.length) {
-          setOrders((current) => {
-            const map = new Map()
-            ;[...current, ...recent].forEach((order) => {
-              if (order?.orderId) map.set(order.orderId, { ...(map.get(order.orderId) ?? {}), ...order })
-            })
-            return Array.from(map.values())
-          })
-        }
-      } catch {
-        // ignorer
-      }
-    }
-
-    syncRecent()
-    const interval = window.setInterval(syncRecent, 10000)
     return () => window.clearInterval(interval)
   }, [lastOrder?.orderId])
 

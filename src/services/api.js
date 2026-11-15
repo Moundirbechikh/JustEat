@@ -67,63 +67,40 @@ function saveRecentOrders(next) {
   }
 }
 
-export async function getOrderById(orderId) {
+export async function trackOrder(orderId) {
   const normalized = String(orderId ?? "").trim();
   if (!normalized) return null;
 
-  const candidates = [
-    { action: "getOrder", payload: { orderId: normalized } },
-    { action: "getOrderStatus", payload: { orderId: normalized } },
-    { action: "getOrderById", payload: { orderId: normalized } },
-    { action: "trackOrder", payload: { orderId: normalized } },
-    { action: "adminOrders", payload: {} },
-  ];
+  if (!API_URL) return null;
 
-  for (const candidate of candidates) {
-    try {
-      const data = await requestPublic(candidate.action, candidate.payload);
-      if (!data) continue;
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "trackOrder", orderId: normalized }),
+    });
 
-      if (candidate.action === "adminOrders") {
-        const orders = Array.isArray(data?.orders) ? data.orders : [];
-        const match = orders.find((order) => {
-          const target = String(order?.orderId ?? "").trim();
-          return (
-            target &&
-            (target === normalized || target === normalized.replace(/^#/, ""))
-          );
-        });
-        if (match) return match;
-        continue;
-      }
+    const text = await res.text();
+    const data = safeJsonParse(text);
 
-      if (data?.order) return data.order;
-      if (data?.data?.order) return data.data.order;
-      if (Array.isArray(data)) {
-        const match = data.find((order) => {
-          const target = String(order?.orderId ?? "").trim();
-          return (
-            target &&
-            (target === normalized || target === normalized.replace(/^#/, ""))
-          );
-        });
-        if (match) return match;
-      }
-      if (data?.orderId || data?.status) {
-        const target = String(data?.orderId ?? "").trim();
-        if (
-          target &&
-          (target === normalized || target === normalized.replace(/^#/, ""))
-        ) {
-          return data;
-        }
-      }
-    } catch {
-      // on continue vers le prochain essai
-    }
+    if (!res.ok || data?.ok === false) return null;
+    if (!data || data.ok === undefined) return null;
+
+    return data.order ?? data;
+  } catch {
+    return null;
+  }
+}
+
+export async function getOrderById(orderId) {
+  const data = await trackOrder(orderId);
+  if (!data) return null;
+
+  if (data.orderId || data.status) {
+    return data;
   }
 
-  return null;
+  return data;
 }
 
 export async function getTrackingOrders() {
