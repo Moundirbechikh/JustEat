@@ -6,6 +6,7 @@ import AvailabilityPage from './AvailabilityPage'
 import OrdersPage from './OrdersPage'
 import TablesPage from './TablesPage'
 import SettingsPage from './SettingsPage'
+import AddProductPage from './AddProductPage'
 
 function ProtectedAdmin({ children }) {
   const { isAuthenticated } = useAdminAuth()
@@ -27,6 +28,7 @@ export default function AdminApp() {
                 <Route path="commandes" element={<OrdersPage />} />
                 <Route path="tables" element={<TablesPage />} />
                 <Route path="disponibilites" element={<AvailabilityPage />} />
+                <Route path="ajouter" element={<AddProductPage />} />
                 <Route path="parametres" element={<SettingsPage />} />
               </Routes>
             </AdminLayout>

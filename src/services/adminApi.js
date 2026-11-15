@@ -158,6 +158,10 @@ export async function adminResetAvailability() {
   return request("adminResetAvailability");
 }
 
+export async function adminCreateProduct(product) {
+  return request("adminCreateProduct", { product });
+}
+
 export async function adminConfigGet() {
   logDebug("[adminConfigGet] fetch config", {});
   return request("adminConfigGet");

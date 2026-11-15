@@ -8,6 +8,7 @@ const tabs = [
   { to: '/admin/commandes', label: 'Commandes', end: true },
   { to: '/admin/tables', label: 'Tables' },
   { to: '/admin/disponibilites', label: 'Disponibilités' },
+  { to: '/admin/ajouter', label: 'Ajouter un plat' },
   { to: '/admin/parametres', label: 'Réglages' },
 ]
 
@@ -225,9 +226,7 @@ export default function AdminLayout({ children }) {
       </header>
 
       {/* ---------- Contenu Principal (Plein écran sans marges contraintes) ---------- */}
-      <main className="w-full">
-        {children}
-      </main>
+      <main className="w-full">{children}</main>
     </div>
   )
 }
