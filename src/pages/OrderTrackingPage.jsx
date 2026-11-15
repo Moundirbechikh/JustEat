@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
 import {
@@ -21,7 +21,7 @@ import {
   Utensils,
   X,
 } from 'lucide-react'
-import { getLastOrder, getRecentOrders } from '../services/api'
+import { getLastOrder, getOrderById, getTrackingOrders } from '../services/api'
 import { formatPrice } from '../utils/format'
 import burger from '../assets/Fond1.png'
 
@@ -353,16 +353,59 @@ export default function OrderTrackingPage() {
   const [lastOrder] = useState(() => getLastOrder())
   const [selectedId, setSelectedId] = useState(null)
   const [search, setSearch] = useState('')
+  const [orders, setOrders] = useState(() => {
+    const initial = lastOrder ? [lastOrder] : []
+    return initial
+  })
+  const [loading, setLoading] = useState(false)
 
-  // Dernière commande + commandes récentes, sans doublon (les données récentes l'emportent)
-  const orders = useMemo(() => {
-    const merged = [lastOrder, ...getRecentOrders()].filter(Boolean)
-    const map = new Map()
-    merged.forEach((order) => {
-      if (order?.orderId) map.set(order.orderId, { ...(map.get(order.orderId) ?? {}), ...order })
-    })
-    return Array.from(map.values())
-  }, [lastOrder])
+  useEffect(() => {
+    if (!lastOrder?.orderId) return
+    const refreshOrder = async () => {
+      try {
+        setLoading(true)
+        const fresh = await getOrderById(lastOrder.orderId)
+        if (fresh) {
+          setOrders((current) => {
+            const merged = [fresh, ...current.filter((order) => order.orderId !== fresh.orderId)]
+            return merged
+          })
+        }
+      } catch {
+        // ignorer
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    refreshOrder()
+    const interval = window.setInterval(refreshOrder, 5000)
+    return () => window.clearInterval(interval)
+  }, [lastOrder?.orderId])
+
+  useEffect(() => {
+    const syncRecent = async () => {
+      if (!lastOrder?.orderId) return
+      try {
+        const recent = await getTrackingOrders()
+        if (Array.isArray(recent) && recent.length) {
+          setOrders((current) => {
+            const map = new Map()
+            ;[...current, ...recent].forEach((order) => {
+              if (order?.orderId) map.set(order.orderId, { ...(map.get(order.orderId) ?? {}), ...order })
+            })
+            return Array.from(map.values())
+          })
+        }
+      } catch {
+        // ignorer
+      }
+    }
+
+    syncRecent()
+    const interval = window.setInterval(syncRecent, 10000)
+    return () => window.clearInterval(interval)
+  }, [lastOrder?.orderId])
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -424,6 +467,13 @@ export default function OrderTrackingPage() {
               </label>
             )}
           </div>
+
+          {loading && orders.length > 0 && (
+            <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#C62F1D]/10 px-3 py-1.5 text-sm font-semibold text-[#C62F1D]">
+              <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-[#C62F1D]" />
+              Mise à jour du statut…
+            </div>
+          )}
 
           {/* ----- Aucune commande enregistrée ----- */}
           {orders.length === 0 && (

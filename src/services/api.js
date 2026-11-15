@@ -13,6 +13,29 @@ function safeJsonParse(text) {
   }
 }
 
+async function requestPublic(action, payload = {}) {
+  if (!API_URL) return null;
+
+  try {
+    const res = await fetch(`${API_URL}`, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action, ...payload }),
+    });
+
+    const text = await res.text();
+    const data = safeJsonParse(text);
+
+    if (!res.ok || data?.ok === false) {
+      return null;
+    }
+
+    return data;
+  } catch {
+    return null;
+  }
+}
+
 function readRecentOrders() {
   try {
     const raw = localStorage.getItem("jb_recent_orders");
@@ -41,6 +64,82 @@ function saveRecentOrders(next) {
     localStorage.setItem("jb_recent_orders", JSON.stringify(next));
   } catch {
     // ignoré
+  }
+}
+
+export async function getOrderById(orderId) {
+  const normalized = String(orderId ?? "").trim();
+  if (!normalized) return null;
+
+  const candidates = [
+    { action: "getOrder", payload: { orderId: normalized } },
+    { action: "getOrderStatus", payload: { orderId: normalized } },
+    { action: "getOrderById", payload: { orderId: normalized } },
+    { action: "trackOrder", payload: { orderId: normalized } },
+    { action: "adminOrders", payload: {} },
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      const data = await requestPublic(candidate.action, candidate.payload);
+      if (!data) continue;
+
+      if (candidate.action === "adminOrders") {
+        const orders = Array.isArray(data?.orders) ? data.orders : [];
+        const match = orders.find((order) => {
+          const target = String(order?.orderId ?? "").trim();
+          return (
+            target &&
+            (target === normalized || target === normalized.replace(/^#/, ""))
+          );
+        });
+        if (match) return match;
+        continue;
+      }
+
+      if (data?.order) return data.order;
+      if (data?.data?.order) return data.data.order;
+      if (Array.isArray(data)) {
+        const match = data.find((order) => {
+          const target = String(order?.orderId ?? "").trim();
+          return (
+            target &&
+            (target === normalized || target === normalized.replace(/^#/, ""))
+          );
+        });
+        if (match) return match;
+      }
+      if (data?.orderId || data?.status) {
+        const target = String(data?.orderId ?? "").trim();
+        if (
+          target &&
+          (target === normalized || target === normalized.replace(/^#/, ""))
+        ) {
+          return data;
+        }
+      }
+    } catch {
+      // on continue vers le prochain essai
+    }
+  }
+
+  return null;
+}
+
+export async function getTrackingOrders() {
+  if (!API_URL) return [];
+
+  try {
+    const data = await requestPublic("adminOrders", {});
+    if (!data) return [];
+    const orders = Array.isArray(data?.orders)
+      ? data.orders
+      : Array.isArray(data)
+        ? data
+        : [];
+    return orders.filter(Boolean);
+  } catch {
+    return [];
   }
 }
 
