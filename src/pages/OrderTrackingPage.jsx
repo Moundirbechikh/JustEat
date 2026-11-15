@@ -359,6 +359,16 @@ export default function OrderTrackingPage() {
   })
   const [loading, setLoading] = useState(false)
 
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return orders
+    return orders.filter((order) =>
+      [order.orderId, order.name, order.table, order.phone].filter(Boolean).join(' ').toLowerCase().includes(q)
+    )
+  }, [orders, search])
+
+  const activeOrder = filtered.find((order) => order.orderId === selectedId) ?? filtered[0] ?? null
+
   useEffect(() => {
     if (!lastOrder?.orderId) {
       console.log("[OrderTrackingPage] no lastOrder found");
@@ -395,18 +405,8 @@ export default function OrderTrackingPage() {
 
   useEffect(() => {
     console.log("[OrderTrackingPage] current orders state", orders)
-    console.log("[OrderTrackingPage] activeOrder", filtered.find((order) => order.orderId === selectedId) ?? filtered[0] ?? null)
-  }, [orders, selectedId, filtered])
-
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    if (!q) return orders
-    return orders.filter((order) =>
-      [order.orderId, order.name, order.table, order.phone].filter(Boolean).join(' ').toLowerCase().includes(q)
-    )
-  }, [orders, search])
-
-  const activeOrder = filtered.find((order) => order.orderId === selectedId) ?? filtered[0] ?? null
+    console.log("[OrderTrackingPage] activeOrder", activeOrder)
+  }, [orders, activeOrder])
 
   // Destination du bouton « Commander à nouveau » : la table si la commande vient d'une table
   const reorderTo =
