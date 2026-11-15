@@ -408,6 +408,7 @@ export default function OrderTrackingPage() {
     console.log("[OrderTrackingPage] activeOrder", activeOrder)
   }, [orders, activeOrder])
 
+  
   // Destination du bouton « Commander à nouveau » : la table si la commande vient d'une table
   const reorderTo =
     activeOrder && (activeOrder.source === 'table' || activeOrder.table) && activeOrder.table
