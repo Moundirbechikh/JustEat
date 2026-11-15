@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, Navigate, useParams } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
 import {
   Armchair,
+  ArrowLeft,
   ArrowRight,
   Ban,
   BellRing,
@@ -19,11 +20,15 @@ import {
   Store,
   User,
   Utensils,
+  WifiOff,
   X,
 } from 'lucide-react'
-import { getLastOrder, getOrderById, getTrackingOrders } from '../services/api'
+import { getLastOrder, getOrderById, getRecentOrders, getTableOrder } from '../services/api'
+import { useCart } from '../context/CartContext'
+import { TABLE_RE, tableNumber } from '../utils/tables'
 import { formatPrice } from '../utils/format'
 import burger from '../assets/Fond1.png'
+import logo from '../assets/Logo1.png'
 
 /* ---------- Données et helpers ---------- */
 
@@ -31,6 +36,8 @@ import burger from '../assets/Fond1.png'
 const norm = (value) => String(value ?? '').normalize('NFC').trim().toLowerCase()
 
 const STOPPED = ['refusée', 'annulée']
+const FINAL = ['servie', ...STOPPED] // plus de mise à jour automatique à partir de là
+const POLL_MS = 12000 // rafraîchissement du statut
 
 // Étapes selon le type de commande
 function getSteps(isTable) {
@@ -107,7 +114,11 @@ function getItemLines(items) {
       .map((item) => {
         const qty = item?.qty ? `${item.qty}× ` : ''
         const variant = item?.variant ? ` (${item.variant})` : ''
-        return `${qty}${item?.name ?? ''}${variant}`.trim()
+        const extras = (Array.isArray(item?.options) ? item.options : [])
+          .map((option) => (typeof option === 'string' ? option : option?.name))
+          .filter(Boolean)
+        const extra = extras.length ? ` (+ ${extras.join(', ')})` : ''
+        return `${qty}${item?.name ?? ''}${variant}${extra}`.trim()
       })
       .filter(Boolean)
   }
@@ -138,9 +149,10 @@ function Chip({ icon: Icon, children }) {
 
 /* ---------- Vue d'une commande ---------- */
 
-function OrderView({ order, reduce }) {
+function OrderView({ order, reduce, menuTo }) {
   const status = norm(order.status)
   const isTable = order.source === 'table' || Boolean(order.table)
+  const tableNo = tableNumber(order.table)
   const stopped = STOPPED.includes(status)
   const steps = getSteps(isTable)
   const found = steps.findIndex((step) => step.key === status)
@@ -155,7 +167,7 @@ function OrderView({ order, reduce }) {
 
   const rows = [
     isTable
-      ? { icon: Armchair, label: 'Lieu', value: `Table ${order.table || '—'}` }
+      ? { icon: Armchair, label: 'Lieu', value: `Table ${tableNo || '—'}` }
       : { icon: ShoppingBag, label: 'Type', value: 'Commande en ligne' },
     !isTable && MODE_LABEL[order.type]
       ? { icon: MapPin, label: 'Mode', value: MODE_LABEL[order.type] }
@@ -164,8 +176,6 @@ function OrderView({ order, reduce }) {
     order.phone ? { icon: Phone, label: 'Téléphone', value: order.phone } : null,
     { icon: Clock3, label: 'Envoyée', value: formatWhen(order.createdAt) },
   ].filter(Boolean)
-
-  const retryTo = isTable && order.table ? `/table/${order.table}` : '/menu'
 
   return (
     <>
@@ -208,7 +218,7 @@ function OrderView({ order, reduce }) {
 
           <div className="mt-6 flex flex-wrap gap-2 text-sm font-semibold">
             <Chip icon={isTable ? Armchair : ShoppingBag}>
-              {isTable ? `Table ${order.table || '—'}` : 'En ligne'}
+              {isTable ? `Table ${tableNo || '—'}` : 'En ligne'}
             </Chip>
             <Chip icon={Clock3}>{formatWhen(order.createdAt)}</Chip>
             {!stopped && status !== 'servie' && <Chip icon={Store}>Paiement à la caisse</Chip>}
@@ -228,7 +238,7 @@ function OrderView({ order, reduce }) {
               Si tu es toujours sur place, demande à un membre de l’équipe. Tu peux aussi repasser commande.
             </p>
             <Link
-              to={retryTo}
+              to={menuTo}
               className="group mt-4 inline-flex items-center gap-2 rounded-full bg-[#C62F1D] px-6 py-3 font-display font-bold text-white transition hover:bg-neutral-900"
             >
               Repasser commande
@@ -346,18 +356,38 @@ function OrderView({ order, reduce }) {
   )
 }
 
-/* ---------- Page ---------- */
+/* ---------- Écran de suivi (site ou espace table) ---------- */
 
-export default function OrderTrackingPage() {
+function TrackingScreen({ tableId }) {
   const reduce = useReducedMotion()
-  const [lastOrder] = useState(() => getLastOrder())
+  const { setTable } = useCart()
+  const isTableMode = Boolean(tableId)
+  const menuTo = isTableMode ? `/table/${tableId}` : '/menu'
+
+  // En espace table, le panier doit savoir de quelle table on parle
+  useEffect(() => {
+    if (!isTableMode) return undefined
+    setTable(tableId)
+    return () => setTable(null)
+  }, [isTableMode, tableId, setTable])
+
+  // Espace table : UNE seule commande (celle de cet appareil pour cette table).
+  // Site : les commandes en ligne de cet appareil.
+  const [orders, setOrders] = useState(() => {
+    if (isTableMode) {
+      const mine = getTableOrder(tableId)
+      return mine ? [mine] : []
+    }
+    const map = new Map()
+    ;[getLastOrder(), ...getRecentOrders()].filter(Boolean).forEach((order) => {
+      if (order?.orderId) map.set(order.orderId, { ...(map.get(order.orderId) ?? {}), ...order })
+    })
+    return Array.from(map.values())
+  })
   const [selectedId, setSelectedId] = useState(null)
   const [search, setSearch] = useState('')
-  const [orders, setOrders] = useState(() => {
-    const initial = lastOrder ? [lastOrder] : []
-    return initial
-  })
-  const [loading, setLoading] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [refreshFailed, setRefreshFailed] = useState(false)
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -369,38 +399,46 @@ export default function OrderTrackingPage() {
 
   const activeOrder = filtered.find((order) => order.orderId === selectedId) ?? filtered[0] ?? null
 
+  const activeId = activeOrder?.orderId
+  const activeToken = activeOrder?.editToken
+  const activeFinal = FINAL.includes(norm(activeOrder?.status))
+
+  // Mise à jour automatique du statut : toutes les 12 s, en pause quand l'onglet est caché,
+  // et arrêtée dès que la commande est servie, refusée ou annulée
   useEffect(() => {
-    if (!lastOrder?.orderId) return
+    if (!activeId || !activeToken || activeFinal) return undefined
+    let cancelled = false
 
-    const refreshOrder = async () => {
-      try {
-        setLoading(true)
-        const fresh = await getOrderById(lastOrder.orderId)
-
-        if (fresh) {
-          setOrders((current) => [fresh, ...current.filter((order) => order.orderId !== fresh.orderId)])
-        }
-      } catch {
-        // ignore
-      } finally {
-        setLoading(false)
+    const refresh = async () => {
+      if (document.hidden) return
+      const fresh = await getOrderById(activeId, activeToken)
+      if (cancelled) return
+      if (fresh) {
+        setRefreshFailed(false)
+        setOrders((current) =>
+          current.map((order) => (order.orderId === activeId ? { ...order, ...fresh } : order))
+        )
+      } else {
+        setRefreshFailed(true)
       }
     }
 
-    refreshOrder()
-  }, [lastOrder?.orderId])
+    setSyncing(true)
+    refresh().finally(() => {
+      if (!cancelled) setSyncing(false)
+    })
+    const interval = window.setInterval(refresh, POLL_MS)
+    const onVisible = () => {
+      if (!document.hidden) refresh()
+    }
+    document.addEventListener('visibilitychange', onVisible)
 
-  useEffect(() => {
-    console.log("[OrderTrackingPage] current orders state", orders)
-    console.log("[OrderTrackingPage] activeOrder", activeOrder)
-  }, [orders, activeOrder])
-
-  
-  // Destination du bouton « Commander à nouveau » : la table si la commande vient d'une table
-  const reorderTo =
-    activeOrder && (activeOrder.source === 'table' || activeOrder.table) && activeOrder.table
-      ? `/table/${activeOrder.table}`
-      : '/menu'
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [activeId, activeToken, activeFinal])
 
   const selectOrder = (orderId) => {
     setSelectedId(orderId)
@@ -409,7 +447,35 @@ export default function OrderTrackingPage() {
 
   return (
     <main className="flex min-h-dvh flex-col bg-white text-neutral-900">
-      <div className="flex-1 px-5 pb-20 pt-28 md:pt-32 lg:px-10">
+      {/* ----- Barre du haut (espace table uniquement : pas de Navbar) ----- */}
+      {isTableMode && (
+        <header className="border-b-2 border-black/10 bg-white">
+          <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-5 py-4 lg:px-10">
+            <span className="inline-flex items-center rounded-full bg-[#C62F1D] px-4 py-2 shadow-sm">
+              <img
+                src={logo}
+                alt="Just Burgers"
+                className="h-8 w-auto object-contain brightness-0 invert"
+              />
+            </span>
+
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-[#C62F1D] px-3.5 py-1.5 font-display text-sm font-bold uppercase tracking-wide text-white">
+                Table {tableId}
+              </span>
+              <Link
+                to={menuTo}
+                className="inline-flex items-center gap-2 rounded-full border-2 border-black/10 bg-white px-4 py-1.5 text-sm font-bold text-neutral-700 transition hover:border-[#C62F1D] hover:text-[#C62F1D]"
+              >
+                <ArrowLeft size={16} />
+                Menu
+              </Link>
+            </div>
+          </div>
+        </header>
+      )}
+
+      <div className={`flex-1 px-5 pb-20 lg:px-10 ${isTableMode ? 'pt-8 md:pt-10' : 'pt-28 md:pt-32'}`}>
         <div className="mx-auto max-w-5xl">
           {/* ----- En-tête ----- */}
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
@@ -422,7 +488,7 @@ export default function OrderTrackingPage() {
               </h1>
             </div>
 
-            {orders.length > 1 && (
+            {!isTableMode && orders.length > 1 && (
               <label className="flex h-12 w-full items-center gap-2 rounded-full border-2 border-neutral-200 bg-white px-4 text-sm transition focus-within:border-[#C62F1D] md:max-w-sm">
                 <Search size={18} className="shrink-0 text-neutral-400" />
                 <input
@@ -447,10 +513,20 @@ export default function OrderTrackingPage() {
             )}
           </div>
 
-          {loading && orders.length > 0 && (
+          {syncing && orders.length > 0 && (
             <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#C62F1D]/10 px-3 py-1.5 text-sm font-semibold text-[#C62F1D]">
               <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-[#C62F1D]" />
               Mise à jour du statut…
+            </div>
+          )}
+
+          {refreshFailed && activeOrder && !syncing && (
+            <div
+              role="status"
+              className="mt-4 inline-flex items-center gap-2 rounded-full bg-neutral-100 px-3 py-1.5 text-sm font-semibold text-neutral-700"
+            >
+              <WifiOff size={16} />
+              Connexion perdue : dernier statut connu. On réessaie automatiquement.
             </div>
           )}
 
@@ -464,11 +540,15 @@ export default function OrderTrackingPage() {
                 className="mx-auto h-28 w-auto -rotate-12 object-contain opacity-90"
               />
               <h2 className="mt-4 font-display text-3xl font-extrabold tracking-tighter">
-                Aucune commande récente
+                {isTableMode ? `Aucune commande pour la table ${tableId}` : 'Aucune commande récente'}
               </h2>
-              <p className="mt-2 text-neutral-600">Passe une commande pour suivre son avancement ici.</p>
+              <p className="mx-auto mt-2 max-w-md text-neutral-600">
+                {isTableMode
+                  ? 'Tu n’as pas encore commandé depuis cet appareil. Si tu as commandé avec un autre téléphone, demande à un serveur.'
+                  : 'Passe une commande pour suivre son avancement ici.'}
+              </p>
               <Link
-                to="/menu"
+                to={menuTo}
                 className="group mt-6 inline-flex items-center gap-2 rounded-full bg-[#C62F1D] px-7 py-3.5 font-display font-bold text-white transition hover:bg-neutral-900"
               >
                 Voir le menu
@@ -496,9 +576,10 @@ export default function OrderTrackingPage() {
           {/* ----- Commande affichée ----- */}
           {activeOrder && (
             <>
-              <OrderView key={activeOrder.orderId} order={activeOrder} reduce={reduce} />
+              <OrderView key={activeOrder.orderId} order={activeOrder} reduce={reduce} menuTo={menuTo} />
 
-              {orders.length > 1 && (
+              {/* Historique : site uniquement. Jamais en espace table. */}
+              {!isTableMode && orders.length > 1 && (
                 <Card title="Mes commandes" className="mt-6">
                   <ul className="mt-4 grid max-h-80 gap-2 overflow-y-auto sm:grid-cols-2">
                     {filtered.map((order) => {
@@ -556,17 +637,28 @@ export default function OrderTrackingPage() {
                   Un souci avec ta commande ?
                 </h2>
                 <p className="mt-2 text-base text-white/90 sm:text-lg">
-                  Demande à un membre de l’équipe : on est là pour t’aider. Donne-lui ton numéro de commande{' '}
-                  <strong className="font-extrabold text-white">{activeOrder.orderId}</strong> et on s’en occupe tout de suite.
+                  {isTableMode ? (
+                    <>
+                      Fais signe à un serveur : on est là pour t’aider. Ta commande est la{' '}
+                      <strong className="font-extrabold text-white">{activeOrder.orderId}</strong>, table{' '}
+                      <strong className="font-extrabold text-white">{tableId}</strong>.
+                    </>
+                  ) : (
+                    <>
+                      Demande à un membre de l’équipe : on est là pour t’aider. Donne-lui ton numéro de commande{' '}
+                      <strong className="font-extrabold text-white">{activeOrder.orderId}</strong> et on s’en occupe
+                      tout de suite.
+                    </>
+                  )}
                 </p>
               </div>
 
               <Link
-                to={reorderTo}
+                to={menuTo}
                 className="inline-flex shrink-0 items-center gap-2 rounded-full bg-white px-8 py-4 font-display text-base font-bold text-[#C62F1D] shadow-lg transition-all duration-300 hover:scale-105 hover:bg-neutral-900 hover:text-white"
               >
                 <ShoppingBag size={18} />
-                <span>Commander à nouveau</span>
+                <span>{isTableMode ? 'Retour au menu' : 'Commander à nouveau'}</span>
                 <ArrowRight size={18} />
               </Link>
             </motion.div>
@@ -575,4 +667,18 @@ export default function OrderTrackingPage() {
       )}
     </main>
   )
+}
+
+/* ---------- Page : /suivi (site) ou /table/:tableId/suivi (espace table) ---------- */
+
+export default function OrderTrackingPage() {
+  const { tableId } = useParams()
+
+  if (tableId !== undefined) {
+    const clean = tableNumber(tableId)
+    if (!TABLE_RE.test(clean)) return <Navigate to="/table" replace />
+    return <TrackingScreen key={`table-${clean}`} tableId={clean} />
+  }
+
+  return <TrackingScreen key="site" tableId="" />
 }

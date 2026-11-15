@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowLeft, ArrowRight, Check, Minus, Package, Plus, ShoppingBag, Store, Trash2, X } from 'lucide-react'
 import { useCart } from '../../context/CartContext'
@@ -27,14 +27,19 @@ const ORDER_TYPES = [
 export default function CartDrawer() {
   const { items, count, total, open, table, closeCart, setQty, removeLine, clear } = useCart()
   const navigate = useNavigate()
-  const location = useLocation()
 
   const [step, setStep] = useState('cart') // cart | form | done
   const [form, setForm] = useState({ name: '', phone: '', type: 'sur-place', note: '' })
   const [errors, setErrors] = useState({})
   const [sending, setSending] = useState(false)
   const [apiError, setApiError] = useState('')
+  const [tableBusy, setTableBusy] = useState(false)
   const [result, setResult] = useState(null)
+
+  const isTableMode = Boolean(table)
+  // Où retourner : le menu de la table (espace table) ou le menu du site
+  const menuPath = isTableMode ? `/table/${table}` : '/menu'
+  const trackPath = isTableMode ? `/table/${table}/suivi` : '/suivi'
 
   useBodyLock(open)
 
@@ -52,6 +57,7 @@ export default function CartDrawer() {
       const id = setTimeout(() => {
         setStep((s) => (s === 'done' || s === 'form' ? 'cart' : s))
         setApiError('')
+        setTableBusy(false)
       }, 300)
       return () => clearTimeout(id)
     }
@@ -63,6 +69,11 @@ export default function CartDrawer() {
       setForm((f) => ({ ...f, type: 'sur-place' }))
     }
   }, [open, table])
+
+  const goMenu = () => {
+    closeCart()
+    navigate(menuPath)
+  }
 
   const update = (field) => (e) => {
     setForm((f) => ({ ...f, [field]: e.target.value }))
@@ -85,6 +96,7 @@ export default function CartDrawer() {
 
     setSending(true)
     setApiError('')
+    setTableBusy(false)
     try {
       const res = await createOrder({
         name: form.name.trim(),
@@ -105,8 +117,12 @@ export default function CartDrawer() {
       setStep('done')
       clear()
     } catch (error) {
-      const message = error?.message || 'Impossible d’envoyer la commande. Vérifie ta connexion et réessaie.'
-      setApiError(message)
+      if (table && error?.code === 'TABLE_BUSY') {
+        setTableBusy(true)
+        setApiError('Une commande est déjà en cours pour cette table. Tu pourras en passer une nouvelle quand elle sera servie.')
+      } else {
+        setApiError(error?.message || 'Impossible d’envoyer la commande. Vérifie ta connexion et réessaie.')
+      }
     } finally {
       setSending(false)
     }
@@ -116,8 +132,6 @@ export default function CartDrawer() {
     `mt-1.5 w-full rounded-2xl border-2 bg-white px-4 py-3 text-base outline-none transition focus:border-[#C62F1D] ${
       errors[field] ? 'border-[#C62F1D]' : 'border-neutral-200'
     }`
-
-  const isTableMode = Boolean(table)
 
   return (
     <AnimatePresence>
@@ -184,7 +198,7 @@ export default function CartDrawer() {
                     <p className="text-neutral-600">Choisis un burger, on te propose les accompagnements ensuite.</p>
                     <button
                       type="button"
-                      onClick={closeCart}
+                      onClick={goMenu}
                       className="rounded-full bg-[#C62F1D] px-7 py-3 font-bold text-white transition hover:bg-neutral-900"
                     >
                       Voir le menu
@@ -272,37 +286,25 @@ export default function CartDrawer() {
             {step === 'form' && (
               <form onSubmit={submit} className="flex flex-1 flex-col overflow-hidden" noValidate>
                 <div className="flex-1 overflow-y-auto overscroll-contain p-5">
-                  {!isTableMode && (
-                    <label className="block font-bold">
-                      Ton prénom
-                      <input
-                        type="text"
-                        value={form.name}
-                        onChange={update('name')}
-                        autoComplete="given-name"
-                        autoFocus
-                        placeholder="Ex. Yacine"
-                        className={inputClass('name')}
-                      />
-                      {errors.name && <span className="mt-1 block text-sm font-semibold text-[#C62F1D]">{errors.name}</span>}
-                    </label>
-                  )}
-
-                  {isTableMode && (
-                    <label className="block font-bold">
-                      Ton prénom (facultatif)
-                      <input
-                        type="text"
-                        value={form.name}
-                        onChange={update('name')}
-                        autoComplete="given-name"
-                        autoFocus
-                        placeholder="Ex. Yacine"
-                        className={inputClass('name')}
-                      />
-                      {errors.name && <span className="mt-1 block text-sm font-semibold text-[#C62F1D]">{errors.name}</span>}
-                    </label>
-                  )}
+                  <label className="block font-bold">
+                    {isTableMode ? (
+                      <>
+                        Ton prénom <span className="font-normal text-neutral-500">(facultatif)</span>
+                      </>
+                    ) : (
+                      'Ton prénom'
+                    )}
+                    <input
+                      type="text"
+                      value={form.name}
+                      onChange={update('name')}
+                      autoComplete="given-name"
+                      autoFocus
+                      placeholder="Ex. Yacine"
+                      className={inputClass('name')}
+                    />
+                    {errors.name && <span className="mt-1 block text-sm font-semibold text-[#C62F1D]">{errors.name}</span>}
+                  </label>
 
                   {!isTableMode && (
                     <label className="mt-4 block font-bold">
@@ -364,9 +366,19 @@ export default function CartDrawer() {
                   </div>
 
                   {apiError && (
-                    <p role="alert" className="mt-4 rounded-2xl bg-[#C62F1D] p-4 font-semibold text-white">
-                      {apiError}
-                    </p>
+                    <div role="alert" className="mt-4 rounded-2xl bg-[#C62F1D] p-4 font-semibold text-white">
+                      <p>{apiError}</p>
+                      {tableBusy && (
+                        <Link
+                          to={trackPath}
+                          onClick={closeCart}
+                          className="mt-3 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-bold text-[#C62F1D] transition hover:bg-neutral-900 hover:text-white"
+                        >
+                          Suivre la commande en cours
+                          <ArrowRight size={16} />
+                        </Link>
+                      )}
+                    </div>
                   )}
                 </div>
 
@@ -401,7 +413,9 @@ export default function CartDrawer() {
                   {result.orderId}
                 </p>
                 <p className="max-w-xs text-neutral-700">
-                  {isTableMode ? 'On t’apporte ta commande. Tu paies à la caisse en partant.' : 'Donne ce numéro à la caisse et paie sur place quand ta commande est prête.'}
+                  {isTableMode
+                    ? 'Un serveur vérifie ta commande, puis on te l’apporte. Tu paies à la caisse en partant.'
+                    : 'Donne ce numéro à la caisse et paie sur place quand ta commande est prête.'}
                 </p>
                 {result.simulated && (
                   <p className="max-w-xs rounded-2xl bg-neutral-100 p-3 text-sm text-neutral-600">
@@ -409,35 +423,20 @@ export default function CartDrawer() {
                   </p>
                 )}
                 <div className="mt-2 flex w-full flex-col gap-3">
-                  {isTableMode ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        closeCart()
-                        navigate(`/table/${table}`)
-                      }}
-                      className="rounded-full bg-[#C62F1D] py-3.5 font-bold text-white transition hover:bg-neutral-900"
-                    >
-                      Retour au menu
-                    </button>
-                  ) : (
-                    <>
-                      <Link
-                        to="/suivi"
-                        onClick={closeCart}
-                        className="rounded-full bg-[#C62F1D] py-3.5 font-bold text-white transition hover:bg-neutral-900"
-                      >
-                        Suivre ma commande
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={closeCart}
-                        className="rounded-full border-2 border-neutral-200 py-3.5 font-bold transition hover:border-[#C62F1D]"
-                      >
-                        Retour au menu
-                      </button>
-                    </>
-                  )}
+                  <Link
+                    to={trackPath}
+                    onClick={closeCart}
+                    className="rounded-full bg-[#C62F1D] py-3.5 font-bold text-white transition hover:bg-neutral-900"
+                  >
+                    Suivre ma commande
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={goMenu}
+                    className="rounded-full border-2 border-neutral-200 py-3.5 font-bold transition hover:border-[#C62F1D]"
+                  >
+                    Retour au menu
+                  </button>
                 </div>
               </div>
             )}

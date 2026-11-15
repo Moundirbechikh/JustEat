@@ -65,7 +65,6 @@ function parseJsonResponse(text) {
   try {
     return JSON.parse(text);
   } catch (error) {
-    console.error("[adminApi] impossible de parser JSON", { text, error });
     return {};
   }
 }
@@ -79,16 +78,10 @@ async function request(action, payload = {}, requireAuth = true) {
     if (!token) {
       const err = new Error("Jeton manquant");
       err.code = "UNAUTHORIZED";
-      console.error("[adminApi] token manquant", { action, payload });
       throw err;
     }
     body.token = token;
   }
-
-  console.group(`[adminApi] ${action}`);
-  logDebug("payload", payload);
-  logDebug("requireAuth", requireAuth);
-  logDebug("API_URL", API_URL);
 
   try {
     const res = await fetch(API_URL, {
@@ -97,26 +90,17 @@ async function request(action, payload = {}, requireAuth = true) {
       body: JSON.stringify(body),
     });
 
-    console.log("status", res.status, res.statusText);
-
     if (!res.ok) {
       const err = new Error("Connexion impossible avec l’API admin");
       err.code = "NETWORK";
-      console.error("[adminApi] network error", {
-        action,
-        status: res.status,
-        statusText: res.statusText,
-      });
       throw err;
     }
 
     const text = await res.text();
     const data = parseJsonResponse(text);
-    console.log("response", data);
 
     if (data?.code === "UNAUTHORIZED") {
       clearAdminSession();
-      console.warn("[adminApi] unauthorized reset session", { action });
     }
 
     return normalizeResponse(data);
@@ -124,10 +108,7 @@ async function request(action, payload = {}, requireAuth = true) {
     if (error?.code === "UNAUTHORIZED") {
       clearAdminSession();
     }
-    console.error("[adminApi] request failed", { action, error });
     throw error;
-  } finally {
-    console.groupEnd();
   }
 }
 
@@ -138,7 +119,6 @@ export async function adminLogin(password) {
 }
 
 export async function adminOrders(version) {
-  logDebug("[adminOrders] fetch", { version });
   return request(
     "adminOrders",
     version === undefined || version === null ? {} : { version },
@@ -146,37 +126,30 @@ export async function adminOrders(version) {
 }
 
 export async function adminSetOrderStatus(orderId, status) {
-  logDebug("[adminSetOrderStatus] start", { orderId, status });
   return request("adminSetOrderStatus", { orderId, status });
 }
 
 export async function adminSetPaid(orderId, paid) {
-  logDebug("[adminSetPaid] start", { orderId, paid });
   return request("adminSetPaid", { orderId, paid });
 }
 
 export async function adminTables() {
-  logDebug("[adminTables] fetch tables", {});
   return request("adminTables");
 }
 
 export async function adminPayTable(table) {
-  logDebug("[adminPayTable] start", { table });
   return request("adminPayTable", { table });
 }
 
 export async function adminSetTableAvailable(table, available) {
-  logDebug("[adminSetTableAvailable] start", { table, available });
   return request("adminSetTableAvailable", { table, available });
 }
 
 export async function adminProducts() {
-  logDebug("[adminProducts] fetch products", {});
   return request("adminProducts");
 }
 
 export async function adminSetAvailability(kind, id, available) {
-  logDebug("[adminSetAvailability] start", { kind, id, available });
   return request("adminSetAvailability", { kind, id, available });
 }
 

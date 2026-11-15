@@ -1,214 +1,185 @@
-// URL de ton Apps Script (une fois publié) : VITE_API_URL=https://script.google.com/macros/s/XXXX/exec
-const API_URL = import.meta.env.VITE_API_URL;
+import { tableNumber } from '../utils/tables'
+
+// URL de ton Apps Script : VITE_API_URL=https://script.google.com/macros/s/XXXX/exec
+const API_URL = import.meta.env.VITE_API_URL
+
+// Stockage dans le navigateur du client
+const LAST_ORDER_KEY = 'jb_last_order' // dernière commande EN LIGNE
+const RECENT_ORDERS_KEY = 'jb_recent_orders' // commandes EN LIGNE récentes
+const TABLE_ORDER_KEY = 'jb_table_order' // dernière commande À TABLE (une seule)
+const TABLE_ORDER_MAX_AGE_MS = 12 * 60 * 60 * 1000 // 12 h
+
+/* ---------- Helpers ---------- */
 
 function safeJsonParse(text) {
-  if (!text || typeof text !== "string") return {};
-  const trimmed = text.trim();
-  if (!trimmed) return {};
-
+  if (!text || typeof text !== 'string') return {}
+  const trimmed = text.trim()
+  if (!trimmed) return {}
   try {
-    return JSON.parse(trimmed);
+    return JSON.parse(trimmed)
   } catch {
-    return { ok: false, error: trimmed };
+    return { ok: false, error: trimmed }
   }
 }
 
-async function requestPublic(action, payload = {}) {
-  if (!API_URL) return null;
-
+function readJson(key, fallback) {
   try {
-    const res = await fetch(`${API_URL}`, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action, ...payload }),
-    });
-
-    const text = await res.text();
-    const data = safeJsonParse(text);
-
-    if (!res.ok || data?.ok === false) {
-      return null;
-    }
-
-    return data;
+    const raw = localStorage.getItem(key)
+    return raw ? JSON.parse(raw) : fallback
   } catch {
-    return null;
+    return fallback
   }
 }
 
-function readRecentOrders() {
+function writeJson(key, value) {
   try {
-    const raw = localStorage.getItem("jb_recent_orders");
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-export function getLastOrder() {
-  try {
-    const raw = localStorage.getItem("jb_last_order");
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
-export function getRecentOrders() {
-  return readRecentOrders();
-}
-
-function saveRecentOrders(next) {
-  try {
-    localStorage.setItem("jb_recent_orders", JSON.stringify(next));
+    localStorage.setItem(key, JSON.stringify(value))
   } catch {
     // ignoré
   }
 }
 
-export async function trackOrder(orderId) {
-  const normalized = String(orderId ?? "").trim();
-  if (!normalized) return null;
+/* ---------- Commandes mémorisées sur cet appareil ---------- */
 
-  if (!API_URL) return null;
+// Commandes en ligne uniquement : les commandes à table sont rangées à part
+export function getRecentOrders() {
+  const list = readJson(RECENT_ORDERS_KEY, [])
+  return Array.isArray(list) ? list.filter((order) => order?.source !== 'table') : []
+}
+
+export function getLastOrder() {
+  const order = readJson(LAST_ORDER_KEY, null)
+  return order && order.source !== 'table' ? order : null
+}
+
+// La commande à table de CET appareil, pour CETTE table, si elle date de moins de 12 h
+export function getTableOrder(tableId) {
+  const record = readJson(TABLE_ORDER_KEY, null)
+  if (!record?.orderId) return null
+  if (tableNumber(record.table) !== tableNumber(tableId)) return null
+  if (Date.now() - Number(record.createdAt || 0) > TABLE_ORDER_MAX_AGE_MS) return null
+  return record
+}
+
+function saveOrder(orderId, order, response = {}) {
+  const isTable = Boolean(order?.table)
+  const record = {
+    orderId,
+    editToken: response?.editToken || '', // code secret : sert à suivre / modifier SA commande
+    createdAt: Date.now(),
+    status: response?.status || 'reçue',
+    source: isTable ? 'table' : 'online',
+    table: isTable ? tableNumber(order.table) : null,
+    phone: order?.phone || '',
+    name: order?.name || '',
+  }
+
+  if (isTable) {
+    writeJson(TABLE_ORDER_KEY, record)
+    return
+  }
+
+  writeJson(LAST_ORDER_KEY, record)
+  const recent = getRecentOrders()
+  writeJson(
+    RECENT_ORDERS_KEY,
+    [record, ...recent.filter((item) => item.orderId !== record.orderId)].slice(0, 8)
+  )
+}
+
+/* ---------- Suivi ---------- */
+
+// Le serveur ne répond que si le code secret correspond à la commande
+export async function trackOrder(orderId, editToken) {
+  const id = String(orderId ?? '').trim()
+  const token = String(editToken ?? '').trim()
+  if (!API_URL || !id || !token) return null
 
   try {
     const res = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "trackOrder", orderId: normalized }),
-    });
-
-    const text = await res.text();
-    const data = safeJsonParse(text);
-
-    if (!res.ok || data?.ok === false) return null;
-    if (!data || data.ok === undefined) return null;
-
-    return data.order ?? data;
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'trackOrder', orderId: id, editToken: token }),
+    })
+    const data = safeJsonParse(await res.text())
+    if (!res.ok || data?.ok !== true || !data.order) return null
+    return data.order
   } catch {
-    return null;
+    return null
   }
 }
 
-export async function getOrderById(orderId) {
-  const data = await trackOrder(orderId);
-  if (!data) return null;
-
-  if (data.orderId || data.status) {
-    return data;
-  }
-
-  return data;
+export function getOrderById(orderId, editToken) {
+  return trackOrder(orderId, editToken)
 }
 
-export async function getTrackingOrders() {
-  if (!API_URL) return [];
-
-  try {
-    const data = await requestPublic("adminOrders", {});
-    if (!data) return [];
-    const orders = Array.isArray(data?.orders)
-      ? data.orders
-      : Array.isArray(data)
-        ? data
-        : [];
-    return orders.filter(Boolean);
-  } catch {
-    return [];
-  }
-}
+/* ---------- Menu ---------- */
 
 /**
  * Récupère le menu depuis le Google Sheet (via Apps Script).
- * Renvoie { products: [...] }.
+ * Renvoie { products, options, config }.
  */
 export async function fetchMenu() {
-  if (!API_URL) throw new Error("VITE_API_URL manquant");
-  const res = await fetch(`${API_URL}?action=menu`);
-  if (!res.ok) throw new Error("Impossible de charger le menu");
-  const data = await res.json();
-  if (data.error) throw new Error(data.error);
-  return data;
+  if (!API_URL) throw new Error('VITE_API_URL manquant')
+  const res = await fetch(`${API_URL}?action=menu`)
+  if (!res.ok) throw new Error('Impossible de charger le menu')
+  const data = await res.json()
+  if (data.error) throw new Error(data.error)
+  return data
 }
+
+/* ---------- Commande ---------- */
 
 /**
  * Envoie la commande.
  * - Sans VITE_API_URL : mode test, la commande est simulée (rien n'est enregistré).
  * - Avec VITE_API_URL : POST en text/plain (évite le preflight CORS d'Apps Script).
- *   Le script doit répondre { ok: true, orderId: "#042" } et recalculer le total lui-même.
+ *   Le script répond { ok: true, orderId, editToken, status } et recalcule le total lui-même.
+ * En cas de refus, l'erreur porte le code du serveur dans error.code (ex. TABLE_BUSY).
  */
 export async function createOrder(order) {
   if (!API_URL) {
-    await new Promise((resolve) => setTimeout(resolve, 700));
-    let n = 1;
+    await new Promise((resolve) => setTimeout(resolve, 700))
+    let n = 1
     try {
-      n = Number(localStorage.getItem("jb_order_counter") || "0") + 1;
-      localStorage.setItem("jb_order_counter", String(n));
+      n = Number(localStorage.getItem('jb_order_counter') || '0') + 1
+      localStorage.setItem('jb_order_counter', String(n))
     } catch {
       // ignoré
     }
-    const orderId = `#${String(n).padStart(3, "0")}`;
-    saveLastOrder(orderId, order);
-    return { ok: true, orderId, simulated: true };
+    const orderId = `#${String(n).padStart(3, '0')}`
+    saveOrder(orderId, order)
+    return { ok: true, orderId, simulated: true }
   }
 
   try {
     const res = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "createOrder", order }),
-    });
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'createOrder', order }),
+    })
 
-    const text = await res.text();
-    const data = safeJsonParse(text);
+    const text = await res.text()
+    const data = safeJsonParse(text)
 
     if (!res.ok || data?.ok === false) {
-      const message =
-        data?.error || data?.message || text || "Commande refusée";
-      throw new Error(message);
+      const error = new Error(data?.error || data?.message || text || 'Commande refusée')
+      error.code = data?.code
+      throw error
     }
 
     if (!data || data.ok === undefined || !data.orderId) {
-      throw new Error(
-        "Réponse de commande invalide. Vérifie le déploiement Apps Script.",
-      );
+      throw new Error('Réponse de commande invalide. Vérifie le déploiement Apps Script.')
     }
 
-    saveLastOrder(data.orderId, order, data);
-    return data;
+    saveOrder(data.orderId, order, data)
+    return data
   } catch (error) {
-    const msg = error?.message || "Impossible de créer la commande.";
-    console.error("[createOrder] erreur", {
-      error,
-      payload: order,
-      apiUrl: API_URL,
-    });
-    throw new Error(msg);
-  }
-}
-
-function saveLastOrder(orderId, order, response = {}) {
-  const record = {
-    orderId,
-    createdAt: Date.now(),
-    status: response?.status || "reçue",
-    source: order?.table ? "table" : "online",
-    table: order?.table || null,
-    phone: order?.phone || "",
-    name: order?.name || "",
-  };
-
-  try {
-    localStorage.setItem("jb_last_order", JSON.stringify(record));
-    const recent = readRecentOrders();
-    const next = [
-      record,
-      ...recent.filter((item) => item.orderId !== record.orderId),
-    ].slice(0, 8);
-    saveRecentOrders(next);
-  } catch {
-    // ignoré
+    console.error('[createOrder] erreur', error)
+    if (error?.code) throw error
+    if (error?.name === 'TypeError') {
+      throw new Error('Impossible de contacter le serveur. Vérifie ta connexion et réessaie.')
+    }
+    throw new Error(error?.message || 'Impossible de créer la commande.')
   }
 }

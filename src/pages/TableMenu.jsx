@@ -1,17 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { ArrowRight, Check, ShoppingBag, Store } from 'lucide-react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { ArrowRight, Check, Receipt, ShoppingBag, Store } from 'lucide-react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import logo from '../assets/Logo1.png'
 import fond1 from '../assets/Fond1.png'
 import fond2 from '../assets/Fond2.png'
 import { CATEGORIES } from '../data/menu'
 import { useMenu } from '../context/MenuContext'
 import { useCart } from '../context/CartContext'
+import { getTableOrder } from '../services/api'
+import { TABLE_RE } from '../utils/tables'
 import { BurgerCard, ItemRow } from '../components/menu/MenuCards'
 import ProductSheet from '../components/menu/ProductSheet'
 
-const TABLE_RE = /^(?:[1-9]|10)$/
 const TABLE_STORAGE_KEY = 'jb_table'
 
 function TableAccessScreen({ defaultValue = '', onSubmit }) {
@@ -30,8 +31,8 @@ function TableAccessScreen({ defaultValue = '', onSubmit }) {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#F5F2EE] px-5 py-12 text-neutral-900">
-      <div className="w-full max-w-md rounded-[2rem] border border-neutral-200 bg-white p-6 shadow-xl shadow-black/10">
+    <main className="flex min-h-screen items-center justify-center bg-white px-5 py-12 text-neutral-900">
+      <div className="w-full max-w-md rounded-[2rem] border-2 border-black/10 bg-white p-6 shadow-xl shadow-black/5">
         <div className="flex items-center justify-center">
           <img src={logo} alt="Just Burgers" className="h-16 w-auto object-contain" />
         </div>
@@ -78,7 +79,7 @@ export default function TableMenu() {
   const { tableId } = useParams()
   const navigate = useNavigate()
   const reduce = useReducedMotion()
-  const { setTable, addLines, count } = useCart()
+  const { setTable, addLines, count, openCart } = useCart()
   const { products, options } = useMenu()
 
   const cleanTableId = tableId?.trim() || ''
@@ -163,6 +164,9 @@ export default function TableMenu() {
     setActiveIndex(index)
   }
 
+  // La commande de CET appareil pour CETTE table (si elle date de moins de 12 h)
+  const myOrder = isValidTable ? getTableOrder(cleanTableId) : null
+
   if (!isValidTable) {
     return <TableAccessScreen defaultValue={cleanTableId} onSubmit={(next) => navigate(`/table/${next}`)} />
   }
@@ -198,10 +202,21 @@ export default function TableMenu() {
               <h1 className="font-display text-4xl font-extrabold leading-[1.05] tracking-tighter sm:text-6xl md:text-7xl">
                 Notre carte & tarifs
               </h1>
-              <div className="mt-4 inline-block">
-                <span className="rounded-full bg-[#C62F1D] px-3.5 py-1.5 font-display text-md font-bold uppercase tracking-wid text-white shadow-sm sm:text-lg">
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-[#C62F1D] px-3.5 py-1.5 font-display text-md font-bold uppercase tracking-wide text-white shadow-sm sm:text-lg">
                   Table {cleanTableId}
                 </span>
+
+                {/* Lien vers le suivi : seulement si cet appareil a déjà commandé pour cette table */}
+                {myOrder && (
+                  <Link
+                    to={`/table/${cleanTableId}/suivi`}
+                    className="inline-flex items-center gap-2 rounded-full border-2 border-[#C62F1D] px-3.5 py-1.5 font-display text-sm font-bold text-[#C62F1D] transition hover:bg-[#C62F1D] hover:text-white sm:text-base"
+                  >
+                    <Receipt size={16} />
+                    Suivre ma commande {myOrder.orderId}
+                  </Link>
+                )}
               </div>
             </div>
 
@@ -542,7 +557,7 @@ export default function TableMenu() {
 
               <button
                 type="button"
-                onClick={() => {}}
+                onClick={openCart}
                 className="inline-flex shrink-0 items-center gap-2 rounded-full bg-white px-8 py-4 font-display text-base font-bold text-[#C62F1D] shadow-lg transition-all duration-300 hover:scale-105 hover:bg-neutral-900 hover:text-white"
               >
                 <ShoppingBag size={18} />
